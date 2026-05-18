@@ -83,7 +83,38 @@ async function reconciliarUsuarioPorPagamento(db, usuarioId) {
     [usuarioId]
   );
 
-  if (!rows.length) {
+  if (rows.length) {
+    const paymentId = String(rows[0].mp_payment_id || '').trim();
+    if (!/^\d+$/.test(paymentId)) {
+      return {
+        success: false,
+        approved: false,
+        status: 'invalid_payment_id',
+        message: 'payment_id inválido para reconciliação.'
+      };
+    }
+
+    return ativarAssinaturaPorPagamento(db, paymentId);
+  }
+
+  // Fallback importante para PIX/checkout interrompido: localiza pagamento pelo external_reference.
+  const client = getMpClient();
+  const paymentClient = new Payment(client);
+  const searchResponse = await paymentClient.search({
+    options: {
+      external_reference: String(usuarioId),
+      sort: 'date_created',
+      criteria: 'desc',
+      limit: 10
+    }
+  });
+
+  const results =
+    searchResponse?.results ||
+    searchResponse?.body?.results ||
+    [];
+
+  if (!Array.isArray(results) || !results.length) {
     return {
       success: false,
       approved: false,
@@ -92,17 +123,18 @@ async function reconciliarUsuarioPorPagamento(db, usuarioId) {
     };
   }
 
-  const paymentId = String(rows[0].mp_payment_id || '').trim();
-  if (!/^\d+$/.test(paymentId)) {
-    return {
-      success: false,
-      approved: false,
-      status: 'invalid_payment_id',
-      message: 'payment_id inválido para reconciliação.'
-    };
+  const pagamentoAprovado = results.find((item) => String(item?.status || '').toLowerCase() === 'approved');
+  if (pagamentoAprovado?.id) {
+    return ativarAssinaturaPorPagamento(db, String(pagamentoAprovado.id));
   }
 
-  return ativarAssinaturaPorPagamento(db, paymentId);
+  const ultimoPagamento = results[0] || {};
+  return {
+    success: true,
+    approved: false,
+    status: String(ultimoPagamento.status || 'pending'),
+    message: 'Pagamento encontrado, mas ainda não aprovado.'
+  };
 }
 
 async function ativarAssinaturaPorPagamento(db, paymentId) {
@@ -209,15 +241,16 @@ async function criarPreferenciaMp(usuarioId, email, nome, cpfCnpj, planoId) {
     statement_descriptor: 'INTELLISTOCK'
   };
 
-  // Em localhost o Mercado Pago pode rejeitar auto_return/back_urls.
-  // Para ambiente público, enviamos o fluxo completo de retorno + webhook.
+  // Sempre define retorno para o checkout após pagamento.
+  body.back_urls = {
+    success: `${appUrl}/checkout.html?status=success`,
+    failure: `${appUrl}/checkout.html?status=failure`,
+    pending: `${appUrl}/checkout.html?status=pending`
+  };
+  body.auto_return = 'approved';
+
+  // Webhook exige URL pública acessível pelo Mercado Pago.
   if (isPublicHttpUrl(appUrl)) {
-    body.back_urls = {
-      success: `${appUrl}/checkout.html?status=success`,
-      failure: `${appUrl}/checkout.html?status=failure`,
-      pending: `${appUrl}/checkout.html?status=pending`
-    };
-    body.auto_return = 'approved';
     body.notification_url = `${appUrl}/api/assinaturas/webhook`;
   }
 
