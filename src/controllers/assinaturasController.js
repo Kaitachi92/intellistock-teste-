@@ -63,6 +63,48 @@ function getPaymentIdFromPayload(payload = {}) {
   return String(paymentId).trim();
 }
 
+async function reconciliarUsuarioPorPagamento(db, usuarioId) {
+  if (!db || !usuarioId) {
+    return {
+      success: false,
+      approved: false,
+      status: 'invalid_input',
+      message: 'Parâmetros inválidos para reconciliação.'
+    };
+  }
+
+  const [rows] = await db.query(
+    `SELECT mp_payment_id
+     FROM assinaturas
+     WHERE usuario_id = ?
+       AND mp_payment_id IS NOT NULL
+     ORDER BY updated_at DESC
+     LIMIT 1`,
+    [usuarioId]
+  );
+
+  if (!rows.length) {
+    return {
+      success: false,
+      approved: false,
+      status: 'not_found',
+      message: 'Nenhum pagamento associado ao usuário para reconciliação.'
+    };
+  }
+
+  const paymentId = String(rows[0].mp_payment_id || '').trim();
+  if (!/^\d+$/.test(paymentId)) {
+    return {
+      success: false,
+      approved: false,
+      status: 'invalid_payment_id',
+      message: 'payment_id inválido para reconciliação.'
+    };
+  }
+
+  return ativarAssinaturaPorPagamento(db, paymentId);
+}
+
 async function ativarAssinaturaPorPagamento(db, paymentId) {
   if (!paymentId || !/^\d+$/.test(String(paymentId))) {
     return { success: false, status: 'invalid_payment_id', message: 'Pagamento inválido.' };
@@ -547,3 +589,4 @@ class AssinaturasController {
 }
 
 module.exports = AssinaturasController;
+module.exports.reconciliarUsuarioPorPagamento = reconciliarUsuarioPorPagamento;
