@@ -598,9 +598,7 @@
       '/fornecedores.html',
       '/relatorios.html',
       '/assinatura.html',
-      '/historico.html',
-      '/produtos.html',
-      '/checkout.html'
+      '/historico.html'
     ]);
 
     if (protectedPaths.has(window.location.pathname)) {
