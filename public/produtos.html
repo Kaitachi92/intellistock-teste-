@@ -215,8 +215,7 @@
       const ini = (_usuario.nome || 'U').split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
       document.getElementById('avatarInitial').textContent = ini;
       document.getElementById('btnLogout').addEventListener('click', () => {
-        window.AuthService.clearAuthState();
-        window.location.href = '/login.html';
+        window.AuthService.logoutAndRedirect('/login.html');
       });
     }
 

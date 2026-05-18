@@ -16,6 +16,30 @@ app.use(cors({
   credentials: true
 }));
 
+// Evita cache de páginas protegidas e respostas de API para não reabrir sessão via botão voltar.
+app.use((req, res, next) => {
+  const noStorePaths = new Set([
+    '/dashboard.html',
+    '/insumos.html',
+    '/fornecedores.html',
+    '/relatorios.html',
+    '/assinatura.html',
+    '/historico.html',
+    '/produtos.html',
+    '/checkout.html'
+  ]);
+
+  const isApi = req.path.startsWith('/api/');
+  if (isApi || noStorePaths.has(req.path)) {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
+  }
+
+  next();
+});
+
 // Servir arquivos estáticos (HTML, CSS, JS)
 app.use(express.static(path.join(__dirname, 'public')));
 

@@ -212,13 +212,8 @@
       document.getElementById('userName').textContent = _usuario.nome || 'Usuário';
       const ini = (_usuario.nome || 'U').split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
       document.getElementById('avatarInitial').textContent = ini;
-      document.getElementById('btnLogout').addEventListener('click', async () => {
-        const token = window.AuthService.getSessionToken();
-        if (token) {
-          try { await fetch('/api/auth/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } }); } catch (_) {}
-        }
-        window.AuthService.clearAuthState();
-        window.location.href = '/login.html';
+      document.getElementById('btnLogout').addEventListener('click', () => {
+        window.AuthService.logoutAndRedirect('/login.html');
       });
     }
 

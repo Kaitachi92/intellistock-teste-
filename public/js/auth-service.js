@@ -139,6 +139,66 @@
     localStorage.removeItem(REMEMBER_KEY);
   }
 
+  function hasActiveSession() {
+    const currentUser = getCurrentUser();
+    if (!currentUser) return false;
+
+    // Em modo API exigimos token ativo; em mock basta o usuário.
+    if (getMode() === 'api') {
+      return Boolean(getSessionToken());
+    }
+
+    return true;
+  }
+
+  function redirectToLogin(loginPath = '/login.html') {
+    try {
+      window.location.replace(loginPath);
+    } catch (_) {
+      window.location.href = loginPath;
+    }
+  }
+
+  function enforceProtectedPage(loginPath = '/login.html') {
+    const validateSession = () => {
+      hydrateAuthState();
+      if (!hasActiveSession()) {
+        redirectToLogin(loginPath);
+      }
+    };
+
+    validateSession();
+
+    // bfcache/back-forward: ao voltar para a aba, valida novamente a sessão.
+    window.addEventListener('pageshow', () => {
+      validateSession();
+    });
+
+    // Troca de aba/janela também revalida quando voltar ao foco.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        validateSession();
+      }
+    });
+  }
+
+  async function logoutAndRedirect(loginPath = '/login.html') {
+    const token = getSessionToken();
+    if (token && getMode() === 'api') {
+      try {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch (_) {
+        // Mesmo com falha de rede, limpar sessão local para impedir retorno.
+      }
+    }
+
+    clearAuthState();
+    redirectToLogin(loginPath);
+  }
+
   function getMode() {
     const saved = localStorage.getItem(MODE_KEY);
       if (saved === 'mock' || saved === 'api') {
@@ -531,6 +591,21 @@
   function initAuthService() {
     hydrateAuthState();
     setupEditNameButton();
+
+    const protectedPaths = new Set([
+      '/dashboard.html',
+      '/insumos.html',
+      '/fornecedores.html',
+      '/relatorios.html',
+      '/assinatura.html',
+      '/historico.html',
+      '/produtos.html',
+      '/checkout.html'
+    ]);
+
+    if (protectedPaths.has(window.location.pathname)) {
+      enforceProtectedPage('/login.html');
+    }
   }
 
   if (document.readyState === 'loading') {
@@ -558,6 +633,9 @@
     clear2FASession,
     saveAuthSession,
     clearAuthState,
+    hasActiveSession,
+    enforceProtectedPage,
+    logoutAndRedirect,
     hydrateAuthState,
     setupEditNameButton
   };

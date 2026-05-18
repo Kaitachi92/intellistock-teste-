@@ -199,13 +199,8 @@
     document.getElementById('userName').textContent = nome;
     document.getElementById('avatarInitial').textContent = nome.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 
-    document.getElementById('btnLogout').addEventListener('click', async () => {
-      const token = window.AuthService.getSessionToken();
-      if (token) {
-        try { await fetch('/api/auth/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } }); } catch (_) {}
-      }
-      window.AuthService.clearAuthState();
-      window.location.href = '/login.html';
+    document.getElementById('btnLogout').addEventListener('click', () => {
+      window.AuthService.logoutAndRedirect('/login.html');
     });
 
     function fmtMoney(v) { return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
