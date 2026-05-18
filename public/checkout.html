@@ -332,8 +332,7 @@
         if (data.success) {
           checkoutFeedback.textContent = 'Redirecionando para o pagamento...';
           checkoutFeedback.classList.add('success');
-          const url = (location.hostname === 'localhost' && data.sandbox_init_point)
-            ? data.sandbox_init_point : data.init_point;
+          const url = data.init_point || data.sandbox_init_point;
           window.location.href = url;
         } else {
           checkoutFeedback.textContent = data.message || 'Erro ao processar. Tente novamente.';
