@@ -208,7 +208,9 @@
         token_temp: data.token_temp,
         nome: data.nome,
         email_enviado: data.email_enviado === true,
-        codigo_demo: data.codigo_demo || null
+        codigo_demo: data.codigo_demo || null,
+        redirect_after_login: data.redirect_after_login || '/dashboard.html',
+        subscription_required: data.subscription_required === true
       }, remember === true);
       window.location.href = '/verificacao.html';
     }

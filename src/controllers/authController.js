@@ -207,19 +207,16 @@ class AuthController {
         }
       }
 
-      if (exigeAssinatura && Number(statusAcesso?.assinatura_ativa) <= 0) {
-        return res.status(402).json({
-          success: false,
-          code: 'SUBSCRIPTION_REQUIRED',
-          message: 'Assinatura ativa necessária para acessar a plataforma.',
-          redirect: '/produtos.html'
-        });
-      }
+      const possuiAssinaturaAtiva = Number(statusAcesso?.assinatura_ativa) > 0;
+      const acessoCompleto = !exigeAssinatura || possuiAssinaturaAtiva;
 
       const desafio = await criarDesafioVerificacao(db, usuario);
       if (!desafio.success) {
         return res.status(502).json(desafio);
       }
+
+      desafio.subscription_required = !acessoCompleto;
+      desafio.redirect_after_login = acessoCompleto ? '/dashboard.html' : '/assinatura.html';
 
       return res.json(desafio);
 

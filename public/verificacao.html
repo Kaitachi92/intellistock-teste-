@@ -209,7 +209,8 @@
           feedback.textContent = `Acesso confirmado! Bem-vindo, ${data.usuario.nome}.`;
           feedback.classList.add('success');
           window.AuthService.saveAuthSession(data.usuario, data.session_token, session.remember === true);
-          setTimeout(() => { window.location.href = '/dashboard.html'; }, 1400);
+          const redirectAfterLogin = session.redirect_after_login || '/dashboard.html';
+          setTimeout(() => { window.location.href = redirectAfterLogin; }, 1400);
         } else {
           feedback.textContent = data.message || 'Código incorreto.';
           feedback.classList.add('error');
