@@ -209,9 +209,9 @@
       return new Date(v).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
     }
 
-    const PLANO_LABELS = { semanal: 'Semanal', mensal: 'Mensal', anual: 'Anual' };
-    const PLANO_PRECO  = { semanal: 59, mensal: 179, anual: 1690 };
-    const PLANO_INTER  = { semanal: '/semana', mensal: '/mês', anual: '/ano' };
+    const PLANO_LABELS = { teste: 'Teste', semanal: 'Semanal', mensal: 'Mensal', anual: 'Anual' };
+    const PLANO_PRECO  = { teste: 10, semanal: 59, mensal: 179, anual: 1690 };
+    const PLANO_INTER  = { teste: '/7 dias', semanal: '/semana', mensal: '/mês', anual: '/ano' };
     const STATUS_LABELS = { pendente: 'Pendente', ativa: 'Ativa', cancelada: 'Cancelada', suspensa: 'Suspensa', expirada: 'Expirada' };
 
     async function carregar() {
