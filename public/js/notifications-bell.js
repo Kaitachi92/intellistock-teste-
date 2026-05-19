@@ -128,7 +128,10 @@
 
   async function loadFromApi() {
     var headers = getAuthHeadersSafe();
-    var lowRes = await fetch('/api/materiais/estoque/baixo', { headers: headers });
+    var lowRes = await fetch('/api/materiais/estoque/baixo', {
+      headers: headers,
+      credentials: 'include' // Garante envio de cookies de sessão
+    });
     if (!lowRes.ok) throw new Error('http_low_' + lowRes.status);
 
     var lowPayload = await lowRes.json();
