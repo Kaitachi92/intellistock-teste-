@@ -5,7 +5,6 @@ const { MercadoPagoConfig, Preference, Payment } = require('mercadopago');
 
 // ==================== PLANOS ====================
 const PLANOS = {
-  teste:   { nome: 'Plano Teste IntelliStock',       preco: 10.00,   dias: 7   },
   semanal: { nome: 'Assinatura Semanal IntelliStock', preco: 59.00,   dias: 7   },
   mensal:  { nome: 'Assinatura Mensal IntelliStock',  preco: 179.00,  dias: 30  },
   anual:   { nome: 'Assinatura Anual IntelliStock',   preco: 1690.00, dias: 365 }

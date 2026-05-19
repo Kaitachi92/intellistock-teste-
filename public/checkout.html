@@ -98,7 +98,6 @@
             <div class="field">
               <label for="billingCycle">Plano escolhido</label>
               <select id="billingCycle">
-                <option value="teste">Teste — R$ 10</option>
                 <option value="semanal">Semanal — R$ 59</option>
                 <option value="mensal">Mensal — R$ 179</option>
                 <option value="anual">Anual — R$ 1.690</option>
@@ -158,7 +157,6 @@
   <script src="/js/auth-service.js"></script>
   <script>
     const plans = {
-      teste:   { id: 'teste',   name: 'Plano Teste',          price: 10,   intervalLabel: '/7 dias', note: 'Plano de validação para testar o pagamento no ambiente real.', chip: 'Teste rápido',  features: ['Acesso para 1 usuário', 'Validade de 7 dias', 'Fluxo completo de cobrança e confirmação'] },
       semanal: { id: 'semanal', name: 'Assinatura Semanal', price: 59,   intervalLabel: '/semana', note: 'Ideal para testar a operação.', chip: 'Entrada rápida',   features: ['Acesso para 1 usuário', 'Até 150 produtos cadastrados', 'Relatório semanal simplificado'] },
       mensal:  { id: 'mensal',  name: 'Assinatura Mensal',  price: 179,  intervalLabel: '/mês',    note: 'Melhor equilíbrio entre previsibilidade e custo.', chip: 'Mais vendido', features: ['Até 5 usuários', 'Até 1.000 produtos', 'Alertas automáticos de estoque mínimo'] },
       anual:   { id: 'anual',   name: 'Assinatura Anual',   price: 1690, intervalLabel: '/ano',    note: 'Melhor custo-benefício para uso contínuo.', chip: 'Melhor valor',  features: ['Usuários ilimitados', 'Produtos ilimitados', 'Dashboard executivo e suporte VIP'] }
