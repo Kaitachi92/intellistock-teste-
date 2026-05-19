@@ -281,6 +281,61 @@ O projeto ja esta preparado com o arquivo `render.yaml`.
 
 ---
 
+## 📊 Diagramas do Projeto
+
+Com o objetivo de melhorar a documentação e facilitar o entendimento da estrutura do sistema, foram adicionados ao projeto os diagramas MER e DER.
+
+### MER — Modelo Entidade-Relacionamento
+
+O MER (Modelo Entidade-Relacionamento) apresenta a modelagem conceitual do banco de dados do sistema. Nele é possível visualizar:
+
+- As principais entidades do projeto;
+- Os relacionamentos existentes entre elas;
+- A organização lógica das informações;
+- A estrutura utilizada como base para o desenvolvimento do banco de dados.
+
+Esse diagrama auxilia no entendimento das regras de negócio e da arquitetura dos dados da aplicação.
+
+---
+
+### DER — Diagrama Entidade-Relacionamento
+
+O DER (Diagrama Entidade-Relacionamento) representa a estrutura lógica do banco de dados de forma mais detalhada, incluindo:
+
+- Tabelas do sistema;
+- Campos e atributos;
+- Chaves primárias e estrangeiras;
+- Relacionamentos entre tabelas;
+- Estrutura implementada no banco de dados.
+
+Esse diagrama é utilizado como apoio para desenvolvimento, manutenção e futuras expansões do sistema.
+
+---
+
+### 📁 Localização dos Diagramas
+
+Os diagramas adicionados ao projeto podem ser encontrados no seguinte diretório:
+
+```text
+docs/diagramas/
+```
+
+---
+
+### 🖼️ Visualização dos Diagramas
+
+#### MER
+![MER](docs/diagramas/mer.png)
+
+#### DER
+![DER](docs/diagramas/der.png)
+
+
+### Para a visualização em alta resolução, acesse: 
+
+[text](https://drive.google.com/drive/folders/1F8pvLsCms07_1dwhoJ9u2hP8T2JP2ty-?usp=sharing)
+
+
 ## Licenca
 
 ISC
