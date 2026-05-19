@@ -606,6 +606,68 @@ tbody tr:last-child td { border-bottom: 0; }
   transform: translateY(0);
 }
 
+@media (max-width: 1100px) {
+  .topbar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 10px;
+  }
+
+  .brand {
+    min-width: 0;
+  }
+
+  nav {
+    justify-self: stretch;
+    justify-content: flex-start;
+  }
+
+  .user-area {
+    gap: 6px;
+  }
+
+  .user-chip {
+    max-width: 155px;
+    padding: 6px 10px 6px 8px;
+  }
+
+  .btn-logout {
+    padding: 6px 10px;
+  }
+
+  .toolbar .toolbar-btn {
+    min-width: 126px;
+  }
+}
+
+@media (max-width: 920px) {
+  .topbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .brand {
+    order: 1;
+  }
+
+  .user-area {
+    order: 2;
+    margin-left: auto;
+  }
+
+  nav {
+    order: 3;
+    width: 100%;
+    padding-bottom: 2px;
+  }
+
+  .toolbar .toolbar-btn {
+    flex: 1 1 calc(50% - 8px);
+    min-width: 0;
+  }
+}
+
 @media (max-width: 1200px) {
   .kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .chip-greeting { display: none; }
@@ -614,6 +676,9 @@ tbody tr:last-child td { border-bottom: 0; }
 
 @media (max-width: 768px) {
   .topbar { display: flex; align-items: flex-start; flex-direction: column; }
+  .brand {
+    width: 100%;
+  }
   nav {
     width: 100%;
     flex-wrap: nowrap;
@@ -625,7 +690,14 @@ tbody tr:last-child td { border-bottom: 0; }
     white-space: nowrap;
     flex: 0 0 auto;
   }
-  .user-area { width: 100%; justify-content: space-between; }
+  .user-area {
+    width: 100%;
+    justify-content: space-between;
+    margin-left: 0;
+  }
+  .user-chip {
+    max-width: 65vw;
+  }
   .toolbar {
     flex-direction: column;
     align-items: stretch;

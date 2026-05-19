@@ -201,11 +201,37 @@
 
   function getMode() {
     const saved = localStorage.getItem(MODE_KEY);
-      if (saved === 'mock' || saved === 'api') {
-        return saved;
-      }
+    if (saved === 'mock') {
+      return 'mock';
+    }
 
-      return DEFAULT_MODE;
+    if (saved === 'api') {
+      // Recuperacao automatica para ambiente local:
+      // se o modo estiver salvo como API, mas nao houver token ativo e houver usuario local,
+      // troca para mock para evitar loop de redirecionamento para o login.
+      const hasUser = Boolean(getCurrentUser());
+      const hasToken = Boolean(getSessionToken());
+      if (hasUser && !hasToken) {
+        localStorage.setItem(MODE_KEY, 'mock');
+        return 'mock';
+      }
+      return 'api';
+    }
+
+    // Compatibilidade: sessões antigas/locales podem ter usuário salvo sem token.
+    // Nesse caso, assume mock para não forçar redirecionamento indevido ao login.
+    const hasUser = Boolean(getCurrentUser());
+    const hasToken = Boolean(getSessionToken());
+
+    if (hasUser && !hasToken) {
+      return 'mock';
+    }
+
+    if (hasToken) {
+      return 'api';
+    }
+
+    return DEFAULT_MODE;
   }
 
   function setMode(mode) {
@@ -234,6 +260,17 @@
 
   async function apiVerify(payload) {
     const response = await fetch('/api/auth/verificar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+    return data;
+  }
+
+  async function apiReenviarCodigo(payload) {
+    const response = await fetch('/api/auth/reenviar-codigo', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -399,6 +436,41 @@
     return { success: true, usuario: pending.usuario };
   }
 
+  async function mockReenviarCodigo(payload) {
+    const tokenTemp = String(payload?.token_temp || '').trim();
+    const pendingRaw = sessionStorage.getItem('mock_2fa_pending');
+
+    if (!pendingRaw) {
+      return { success: false, message: 'Sessão inválida. Faça login novamente.' };
+    }
+
+    const pending = JSON.parse(pendingRaw);
+    if (!tokenTemp || pending.token_temp !== tokenTemp) {
+      return { success: false, message: 'Sessão inválida. Faça login novamente.' };
+    }
+
+    const novoToken = makeToken();
+    const novoCodigo = makeCode();
+    const novoExpiraEm = Date.now() + 10 * 60 * 1000;
+
+    const nextPending = {
+      ...pending,
+      token_temp: novoToken,
+      codigo: novoCodigo,
+      expiraEm: novoExpiraEm
+    };
+
+    sessionStorage.setItem('mock_2fa_pending', JSON.stringify(nextPending));
+
+    return {
+      success: true,
+      token_temp: novoToken,
+      nome: nextPending.usuario?.nome || pending.usuario?.nome,
+      email_enviado: false,
+      codigo_demo: novoCodigo
+    };
+  }
+
   async function mockSolicitarReset(payload) {
     const email = String(payload.email || '').trim().toLowerCase();
     if (!/\S+@\S+\.\S+/.test(email)) {
@@ -439,6 +511,10 @@
 
   async function verify(payload) {
     return getMode() === 'api' ? apiVerify(payload) : mockVerify(payload);
+  }
+
+  async function reenviarCodigo(payload) {
+    return getMode() === 'api' ? apiReenviarCodigo(payload) : mockReenviarCodigo(payload);
   }
 
   async function solicitarReset(payload) {
@@ -597,7 +673,6 @@
       '/insumos.html',
       '/fornecedores.html',
       '/relatorios.html',
-      '/assinatura.html',
       '/historico.html'
     ]);
 
@@ -614,12 +689,21 @@
 
   hydrateAuthState();
 
+  function getAuthHeaders() {
+    const token = getSessionToken();
+    if (getMode() === 'api' && token) {
+      return { Authorization: `Bearer ${token}` };
+    }
+    return {};
+  }
+
   window.AuthService = {
     getMode,
     setMode,
     login,
     register,
     verify,
+    reenviarCodigo,
     solicitarReset,
     redefinirSenha,
     updateCurrentUserName,
@@ -635,6 +719,7 @@
     enforceProtectedPage,
     logoutAndRedirect,
     hydrateAuthState,
-    setupEditNameButton
+    setupEditNameButton,
+    getAuthHeaders
   };
 })();

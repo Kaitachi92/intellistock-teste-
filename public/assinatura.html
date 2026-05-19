@@ -190,17 +190,64 @@
     </div>
   </div>
 
-  <script src="/js/auth-service.js"></script>
   <script>
-    const usuario = window.AuthService.getCurrentUser();
-    if (!usuario) { window.location.href = '/login.html'; }
+    function readJsonStorage(key) {
+      const sessionVal = sessionStorage.getItem(key);
+      if (sessionVal) {
+        try { return JSON.parse(sessionVal); } catch (_) {}
+      }
+      const localVal = localStorage.getItem(key);
+      if (localVal) {
+        try { return JSON.parse(localVal); } catch (_) {}
+      }
+      return null;
+    }
 
-    const nome = usuario ? (usuario.nome || 'Usuário') : 'Usuário';
+    function getCurrentUserLocal() {
+      return readJsonStorage('is_usuario');
+    }
+
+    function getSessionTokenLocal() {
+      return sessionStorage.getItem('is_session_token') || localStorage.getItem('is_session_token') || null;
+    }
+
+    function getMode() {
+      const saved = localStorage.getItem('auth_mode');
+      if (saved === 'mock' || saved === 'api') return saved;
+      const hasUser = Boolean(getCurrentUserLocal());
+      const hasToken = Boolean(getSessionTokenLocal());
+      return hasUser && !hasToken ? 'mock' : 'api';
+    }
+
+    function clearAuthStateLocal() {
+      ['is_usuario', 'is_session_token', 'is_2fa_session', 'is_remember_me'].forEach((key) => {
+        sessionStorage.removeItem(key);
+        localStorage.removeItem(key);
+      });
+    }
+
+    async function logoutAndRedirect(loginPath = '/login.html') {
+      const token = getSessionTokenLocal();
+      if (token && getMode() === 'api') {
+        try {
+          await fetch('/api/auth/logout', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` }
+          });
+        } catch (_) {}
+      }
+      clearAuthStateLocal();
+      window.location.href = loginPath;
+    }
+
+    const usuario = getCurrentUserLocal();
+
+    const nome = usuario ? (usuario.nome || 'Usuário') : 'Visitante';
     document.getElementById('userName').textContent = nome;
     document.getElementById('avatarInitial').textContent = nome.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 
     document.getElementById('btnLogout').addEventListener('click', () => {
-      window.AuthService.logoutAndRedirect('/login.html');
+      logoutAndRedirect('/login.html');
     });
 
     function fmtMoney(v) { return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
@@ -215,8 +262,55 @@
     const STATUS_LABELS = { pendente: 'Pendente', ativa: 'Ativa', cancelada: 'Cancelada', suspensa: 'Suspensa', expirada: 'Expirada' };
 
     async function carregar() {
-      const token = window.AuthService.getSessionToken();
-      if (!token) { window.location.href = '/login.html'; return; }
+      if (getMode() !== 'api') {
+        const mockAssinatura = {
+          plano: 'mensal',
+          status: 'ativa',
+          valor_pago: PLANO_PRECO.mensal,
+          data_inicio: new Date().toISOString(),
+          data_expiracao: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
+          renovacao_automatica: true,
+          mp_payment_id: null
+        };
+
+        const a = mockAssinatura;
+        document.getElementById('subscriptionContent').style.display = 'block';
+        document.getElementById('emptyState').style.display = 'none';
+
+        document.getElementById('planStatus').textContent   = STATUS_LABELS[a.status] || a.status;
+        document.getElementById('planName').textContent     = PLANO_LABELS[a.plano] || a.plano;
+        document.getElementById('planPrice').textContent    = fmtMoney(Number(a.valor_pago || 0));
+        document.getElementById('planInterval').textContent = PLANO_INTER[a.plano] || '';
+        document.getElementById('planSummary').textContent  = 'Modo local ativo. Assinatura simulada para testes.';
+
+        document.getElementById('nextCharge').textContent = fmtDate(a.data_expiracao);
+        document.getElementById('customerName').textContent = usuario.nome || '-';
+        document.getElementById('customerEmail').textContent = usuario.email || '-';
+        document.getElementById('customerDocument').textContent = '-';
+        document.getElementById('autoRenew').textContent = 'Ativada';
+
+        document.getElementById('cardBrand').textContent = 'Simulado (modo local)';
+        document.getElementById('cardLast4').textContent = '1234';
+        document.getElementById('cardHolder').textContent = usuario.nome || '-';
+        document.getElementById('cardExpiry').textContent = '12/30';
+        document.getElementById('companyName').textContent = '-';
+        document.getElementById('billingStreet').textContent = '-';
+        document.getElementById('billingNumber').textContent = '-';
+        document.getElementById('billingDistrict').textContent = '-';
+        document.getElementById('billingCity').textContent = '-';
+        document.getElementById('subscriptionStatus').textContent = 'Ativa';
+
+        document.getElementById('invoiceList').innerHTML =
+          '<p style="color:#5d6b70;font-size:.92rem;">Modo local ativo: histórico de cobrança indisponível.</p>';
+        return;
+      }
+
+      const token = getSessionTokenLocal();
+      if (!token) {
+        document.getElementById('subscriptionContent').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'block';
+        return;
+      }
 
       try {
         const resp = await fetch('/api/assinaturas/status', { headers: { 'Authorization': 'Bearer ' + token } });

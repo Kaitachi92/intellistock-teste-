@@ -17,8 +17,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/relatorios.css">
+    <link rel="stylesheet" href="/css/toast.css">
   <link rel="stylesheet" href="/css/theme-toggle.css">
+  <link rel="stylesheet" href="/css/notifications-bell.css">
   <script src="/js/theme-toggle.js" defer></script>
+  <script src="/js/notifications-bell.js" defer></script>
 
 </head>
 <body>
@@ -40,7 +43,6 @@
           <span><span class="chip-greeting">Olá, </span><strong id="userName">...</strong></span>
         </button>
         <button class="btn-logout" id="btnLogout">Sair</button>
-
         <div class="user-menu-panel" id="userMenuPanel">
           <div class="subscription-top">
             <div>
@@ -87,12 +89,12 @@
   <main>
     <div class="shell">
       <div class="page-head reveal-section">
-        <span class="pill">Relatórios inteligentes do estoque</span>
-        <h1>Veja com clareza o que mais sai, o que est&#225; parado e onde o estoque precisa da sua aten&#231;&#227;o</h1>
-        <p id="heroCopy">
-          O painel abaixo cruza giro estimado, estoque atual, margem e cobertura para mostrar ao gestor o que mais vende,
-          o que menos vende e quais itens precisam de a&#231;&#227;o comercial ou reposi&#231;&#227;o.
-        </p>
+        <div>
+          <h1>Gestão de Relatórios</h1>
+          <p id="heroCopy">
+            Bem-vindo! Acompanhe giro, cobertura e itens críticos do estoque com leitura clara para decisão rápida.
+          </p>
+        </div>
       </div>
 
       <section class="period-filters reveal-section">
@@ -171,6 +173,14 @@
       </div>
 
       <section class="full-panel reveal-section">
+        <h2>Diagn&#243;stico executivo do estoque</h2>
+        <p>
+          Este resumo transforma os dados do cat&#225;logo em leitura comercial para o gestor entender rapidamente o que est&#225; acontecendo.
+        </p>
+        <div class="insight-grid" id="insightGrid"></div>
+      </section>
+
+      <section class="full-panel reveal-section">
         <h2>Valor vendido por plataforma de e-commerce</h2>
         <p>
           Leitura de faturamento por canal com base nas vendas registradas no hist&#243;rico. Para classificar corretamente,
@@ -178,14 +188,28 @@
         </p>
         <div class="kpi-sub" id="platformSalesSummary">Sem vendas registradas no período.</div>
         <div class="rank-list" id="platformSalesList"></div>
-      </section>
-
-      <section class="full-panel reveal-section">
-        <h2>Diagn&#243;stico executivo do estoque</h2>
-        <p>
-          Este resumo transforma os dados do cat&#225;logo em leitura comercial para o gestor entender rapidamente o que est&#225; acontecendo.
-        </p>
-        <div class="insight-grid" id="insightGrid"></div>
+        <div class="platform-products-block">
+          <div class="platform-products-head">
+            <strong>Produtos vendidos no período</strong>
+            <span id="platformProductsCount">0 registro(s)</span>
+          </div>
+          <div class="platform-products-wrap">
+            <table class="platform-products-table" aria-label="Tabela de produtos vendidos por plataforma">
+              <thead>
+                <tr>
+                  <th>Produto</th>
+                  <th>Plataforma</th>
+                  <th>Qtd</th>
+                  <th>Valor</th>
+                  <th>Data</th>
+                </tr>
+              </thead>
+              <tbody id="platformProductsBody">
+                <tr><td colspan="5">Sem vendas registradas no período.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </section>
 
       <section class="full-panel reveal-section">
@@ -520,13 +544,90 @@
         .trim();
     }
 
+    function toPlatformDisplayName(value) {
+      const words = normalizePlatformLabel(value)
+        .split(/\s+/)
+        .filter((word) => /[a-z]/.test(word))
+        .slice(0, 3);
+
+      if (!words.length) return null;
+
+      return words.map((word) => {
+        if (word === 'ifood') return 'iFood';
+        if (word.length <= 2) return word.toUpperCase();
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      }).join(' ');
+    }
+
+    function inferCustomPlatformFromText(text) {
+      const ignoredTokens = new Set([
+        'venda', 'canal', 'plataforma', 'no', 'na', 'via', 'pelo', 'pela',
+        'de', 'da', 'do', 'registrada', 'registrado', 'registro',
+        'cadastrada', 'cadastrado', 'saida', 'saidas', 'movimentacao',
+        'movimentacoes', 'historico', 'produto', 'pedido', 'nf', 'nfe'
+      ]);
+
+      function sanitizePlatformCandidate(rawCandidate) {
+        const tokens = normalizePlatformLabel(rawCandidate)
+          .split(/\s+/)
+          .map((token) => token.replace(/[^a-z0-9]/g, '').trim())
+          .filter(Boolean)
+          .filter((token) => !ignoredTokens.has(token))
+          .filter((token) => /[a-z]/.test(token));
+
+        if (!tokens.length) return null;
+        return tokens.slice(0, 3).join(' ');
+      }
+
+      const normalized = normalizePlatformLabel(text)
+        .replace(/["'`]/g, ' ')
+        .replace(/[|;,]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      if (!normalized) return null;
+
+      const patterns = [
+        /(?:venda|canal|plataforma)\s*(?:no|na|via|pelo|pela|:|-)?\s*([a-z0-9][a-z0-9\s]{1,32})/i,
+        /^([a-z0-9][a-z0-9\s]{1,24})$/i
+      ];
+
+      for (const pattern of patterns) {
+        const match = normalized.match(pattern);
+        if (!match || !match[1]) continue;
+
+        const candidate = sanitizePlatformCandidate(match[1]);
+
+        if (!candidate || candidate.length < 2) continue;
+        return toPlatformDisplayName(candidate);
+      }
+
+      // Fallback: tenta identificar o ultimo termo relevante da observacao
+      // para casos como "venda registrada kwai".
+      const fallbackTokens = normalized
+        .split(/\s+/)
+        .map((token) => token.replace(/[^a-z0-9]/g, '').trim())
+        .filter(Boolean)
+        .filter((token) => !ignoredTokens.has(token))
+        .filter((token) => /[a-z]/.test(token));
+
+      if (fallbackTokens.length) {
+        return toPlatformDisplayName(fallbackTokens[fallbackTokens.length - 1]);
+      }
+
+      return null;
+    }
+
     function inferPlatformFromMovimentacao(mov) {
-      const text = normalizePlatformLabel(mov?.observacao || '');
+      const observacao = String(mov?.observacao || '');
+      const text = normalizePlatformLabel(observacao);
       if (!text) return 'Sem plataforma informada';
 
       if (text.includes('mercado livre') || text.includes('mercadolivre') || text.includes('ml')) return 'Mercado Livre';
       if (text.includes('shopee')) return 'Shopee';
       if (text.includes('amazon')) return 'Amazon';
+      if (text.includes('tiktok') || text.includes('tik tok') || text.includes('tik-tok') || text.includes('tiktok shop')) return 'TikTok';
+      if (text.includes('kwai')) return 'Kwai';
       if (text.includes('magalu') || text.includes('magazine luiza')) return 'Magalu';
       if (text.includes('ifood') || text.includes('i food')) return 'iFood';
       if (text.includes('site') || text.includes('loja virtual') || text.includes('ecommerce') || text.includes('e-commerce')) return 'Site próprio';
@@ -535,7 +636,22 @@
       if (text.includes('facebook')) return 'Facebook';
       if (text.includes('balcao') || text.includes('balcao fisico') || text.includes('loja fisica') || text.includes('fisica')) return 'Loja física';
 
-      return 'Outros canais';
+      return inferCustomPlatformFromText(observacao) || 'Outros canais';
+    }
+
+    function isMarketplacePlatform(plataforma) {
+      const name = normalizePlatformLabel(plataforma);
+      if (!name || name === 'sem plataforma informada' || name === 'outros canais') return false;
+
+      const nonMarketplace = new Set([
+        'site proprio',
+        'whatsapp',
+        'instagram',
+        'facebook',
+        'loja fisica'
+      ]);
+
+      return !nonMarketplace.has(name);
     }
 
     function buildMaterialLookupMap(materiais) {
@@ -552,6 +668,7 @@
     function buildSalesByPlatformStats(movimentacoes, materiais) {
       const materialMap = buildMaterialLookupMap(materiais);
       const platformMap = new Map();
+      const salesRows = [];
       let totalValor = 0;
       let totalUnidades = 0;
 
@@ -568,6 +685,8 @@
         const valor = Math.max(0, qtd * precoVenda);
 
         const plataforma = inferPlatformFromMovimentacao(mov);
+        if (!isMarketplacePlatform(plataforma)) return;
+
         const atual = platformMap.get(plataforma) || {
           plataforma,
           valorVendido: 0,
@@ -580,6 +699,14 @@
         atual.registros += 1;
         platformMap.set(plataforma, atual);
 
+        salesRows.push({
+          produto: String(mov?.material_nome || material?.nome || 'Material'),
+          plataforma,
+          quantidade: qtd,
+          valor,
+          created_at: mov?.created_at || null
+        });
+
         totalValor += valor;
         totalUnidades += qtd;
       });
@@ -587,6 +714,7 @@
       const items = [...platformMap.values()].sort((a, b) => b.valorVendido - a.valorVendido);
       return {
         items,
+        salesRows,
         totalValor,
         totalUnidades
       };
@@ -595,29 +723,90 @@
     function renderPlatformSales(platformStats) {
       const target = document.getElementById('platformSalesList');
       const summary = document.getElementById('platformSalesSummary');
+      const productsBody = document.getElementById('platformProductsBody');
+      const productsCount = document.getElementById('platformProductsCount');
 
       if (!platformStats?.items?.length) {
+        target.className = 'rank-list';
         target.innerHTML = '<div class="empty-report">Nenhuma venda com valor calculável no período selecionado.</div>';
         summary.textContent = 'Dica: registre a plataforma na observação da venda (ex.: "Venda Shopee").';
+        if (productsCount) productsCount.textContent = '0 registro(s)';
+        if (productsBody) productsBody.innerHTML = '<tr><td colspan="5">Sem vendas registradas no período.</td></tr>';
         return;
       }
 
-      const totalValorFmt = fmtMoney(platformStats.totalValor || 0);
-      const totalUnidadesFmt = Number(platformStats.totalUnidades || 0).toLocaleString('pt-BR');
-      summary.textContent = 'Total vendido no período: ' + totalValorFmt + ' em ' + totalUnidadesFmt + ' un.';
+      const items = platformStats.items;
+      const totalValor = Number(platformStats.totalValor || 0);
+      const totalUnidades = Number(platformStats.totalUnidades || 0);
+      const totalRegistros = items.reduce((acc, item) => acc + Number(item.registros || 0), 0);
+      const ticketMedioGeral = totalUnidades > 0 ? totalValor / totalUnidades : 0;
+      const lider = items[0] || null;
+      const liderShare = totalValor > 0 && lider ? ((Number(lider.valorVendido || 0) / totalValor) * 100) : 0;
 
-      renderRankList(
-        'platformSalesList',
-        platformStats.items,
-        'valorVendido',
-        (value) => fmtMoney(value || 0),
-        (item) => {
-          const un = Number(item.unidadesVendidas || 0).toLocaleString('pt-BR');
-          const rg = Number(item.registros || 0).toLocaleString('pt-BR');
-          return item.plataforma + ' • ' + un + ' un. • ' + rg + ' registro(s)';
-        },
-        false
-      );
+      summary.innerHTML =
+        'Total vendido no período: <strong>' + fmtMoney(totalValor) + '</strong> em ' +
+        '<strong>' + totalUnidades.toLocaleString('pt-BR') + ' un.</strong> • ' +
+        '<strong>' + totalRegistros.toLocaleString('pt-BR') + ' registro(s)</strong> • ' +
+        'Ticket médio geral: <strong>' + fmtMoney(ticketMedioGeral) + '</strong>' +
+        (lider ? ' • Canal líder: <strong>' + escHtml(lider.plataforma) + '</strong> (' + liderShare.toFixed(1).replace('.', ',') + '%)' : '');
+
+      target.className = 'rank-list platform-grid';
+      const maxValor = Math.max(...items.map((item) => Number(item.valorVendido || 0)), 1);
+
+      target.innerHTML = items.map((item, index) => {
+        const valor = Number(item.valorVendido || 0);
+        const unidades = Number(item.unidadesVendidas || 0);
+        const registros = Number(item.registros || 0);
+        const share = totalValor > 0 ? (valor / totalValor) * 100 : 0;
+        const ticketMedio = unidades > 0 ? valor / unidades : 0;
+        const barra = Math.max(6, Math.round((valor / maxValor) * 100));
+
+        return '<article class="platform-card ' + (index === 0 ? 'is-top' : '') + '">' +
+          '<div class="platform-card-head">' +
+            '<div class="platform-ident">' +
+              '<span class="platform-rank">#' + (index + 1) + '</span>' +
+              '<strong class="platform-name">' + escHtml(item.plataforma) + '</strong>' +
+            '</div>' +
+            '<strong class="platform-value">' + fmtMoney(valor) + '</strong>' +
+          '</div>' +
+          '<div class="platform-progress"><span style="width:' + barra + '%"></span></div>' +
+          '<div class="platform-meta">' +
+            '<span>Participação: <strong>' + share.toFixed(1).replace('.', ',') + '%</strong></span>' +
+            '<span>Unidades: <strong>' + unidades.toLocaleString('pt-BR') + '</strong></span>' +
+            '<span>Ticket médio: <strong>' + fmtMoney(ticketMedio) + '</strong></span>' +
+            '<span>Registros: <strong>' + registros.toLocaleString('pt-BR') + '</strong></span>' +
+          '</div>' +
+        '</article>';
+      }).join('');
+
+      const rows = [...(platformStats.salesRows || [])]
+        .filter((row) => isMarketplacePlatform(row?.plataforma))
+        .sort((a, b) => new Date(b?.created_at || 0) - new Date(a?.created_at || 0));
+
+      if (productsCount) {
+        productsCount.textContent = rows.length.toLocaleString('pt-BR') + ' registro(s)';
+      }
+
+      if (productsBody) {
+        if (!rows.length) {
+          productsBody.innerHTML = '<tr><td colspan="5">Sem vendas registradas no período.</td></tr>';
+        } else {
+          const visibleRows = rows.slice(0, 150);
+          productsBody.innerHTML = visibleRows.map((row) => {
+            const when = row?.created_at ? new Date(row.created_at) : null;
+            const dataFmt = when && !Number.isNaN(when.getTime())
+              ? when.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+              : '-';
+            return '<tr>' +
+              '<td title="' + escHtml(row.produto || '-') + '">' + escHtml(truncateLabel(row.produto || '-', 58)) + '</td>' +
+              '<td>' + escHtml(row.plataforma || '-') + '</td>' +
+              '<td>' + Number(row.quantidade || 0).toLocaleString('pt-BR') + '</td>' +
+              '<td>' + fmtMoney(row.valor || 0) + '</td>' +
+              '<td>' + dataFmt + '</td>' +
+            '</tr>';
+          }).join('');
+        }
+      }
     }
 
     function sameDay(a, b) {

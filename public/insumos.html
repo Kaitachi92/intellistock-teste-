@@ -16,9 +16,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/css/insumos.css">
+  <link rel="stylesheet" href="/css/insumos.css">
+  <link rel="stylesheet" href="/css/toast.css">
   <link rel="stylesheet" href="/css/theme-toggle.css">
+  <link rel="stylesheet" href="/css/notifications-bell.css">
   <script src="/js/theme-toggle.js" defer></script>
+  <script src="/js/notifications-bell.js" defer></script>
 
 </head>
 <body>
@@ -246,6 +249,12 @@
         <label>Quantidade vendida</label>
         <input type="number" id="saleQtd" min="0.001" step="0.001" placeholder="Ex: 3">
       </div>
+      <div class="field">
+        <label>Canal da venda (opcional)</label>
+        <select id="saleChannel">
+          <option value="">Venda direta</option>
+        </select>
+      </div>
       <div class="modal-actions">
         <button class="btn btn-soft" id="btnCancelSale">Cancelar</button>
         <button class="btn btn-main" id="btnSaveSale">Confirmar venda</button>
@@ -347,6 +356,7 @@
   </div>
 
   <script src="/js/auth-service.js"></script>
+  <script src="/js/toast.js"></script>
   <script>
     const usuario = window.AuthService.getCurrentUser();
     if (!usuario) {
@@ -401,14 +411,6 @@
     function getMode() {
       const saved = localStorage.getItem('auth_mode');
       return saved === 'mock' ? 'mock' : 'api';
-    }
-
-    function showToast(msg, type = 'success') {
-      const el = document.createElement('div');
-      el.className = `toast ${type}`;
-      el.textContent = msg;
-      document.getElementById('toastWrap').appendChild(el);
-      setTimeout(() => el.remove(), 3500);
     }
 
     function fmtMoney(value) {
@@ -878,7 +880,7 @@
       document.getElementById('fieldCodigo').disabled = editingProductionItem;
       document.getElementById('fieldFornecedor').disabled = editingProductionItem;
       document.getElementById('fieldUnidade').disabled = editingProductionItem;
-      document.getElementById('fieldQtdMin').disabled = editingProductionItem;
+      document.getElementById('fieldQtdMin').disabled = false;
       document.getElementById('fieldCusto').disabled = editingProductionItem;
       document.getElementById('fieldMargem').disabled = editingProductionItem;
       document.getElementById('fieldPreco').readOnly = false;
@@ -1658,7 +1660,44 @@
     const modalOverlay = document.getElementById('modalOverlay');
     const saleOverlay = document.getElementById('saleOverlay');
     const productionOverlay = document.getElementById('productionOverlay');
+    const DEFAULT_SALE_CHANNELS = ['Shopee', 'Mercado Livre', 'TikTok', 'Kwai', 'Amazon', 'Magalu', 'Outro'];
     let saleMaterialId = null;
+
+    function getMarketplaceStorageKey() {
+      const userRef = String(usuario?.id || usuario?.email || usuario?.nome || 'default').trim().toLowerCase();
+      return `intellistock_marketplaces_v1_${userRef}`;
+    }
+
+    function readCustomMarketplaces() {
+      try {
+        const raw = JSON.parse(localStorage.getItem(getMarketplaceStorageKey()) || '[]');
+        if (!Array.isArray(raw)) return [];
+        return [...new Set(raw.map((item) => String(item || '').trim()).filter(Boolean))];
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function getSaleChannels() {
+      return [...new Set([...DEFAULT_SALE_CHANNELS, ...readCustomMarketplaces()])];
+    }
+
+    function fillSaleChannelOptions(selected = '') {
+      const select = document.getElementById('saleChannel');
+      if (!select) return;
+
+      const selectedValue = String(selected || select.value || '').trim();
+      const options = ['<option value="">Venda direta</option>'];
+
+      getSaleChannels().forEach((channel) => {
+        const value = String(channel || '').trim();
+        if (!value) return;
+        const isSelected = value === selectedValue ? ' selected' : '';
+        options.push(`<option value="${escHtml(value)}"${isSelected}>${escHtml(value)}</option>`);
+      });
+
+      select.innerHTML = options.join('');
+    }
 
     function syncModalScrollLock() {
       const anyOpen = modalOverlay.classList.contains('open')
@@ -1737,6 +1776,7 @@
     function openSaleModal(material = null) {
       saleMaterialId = material ? Number(material.id || 0) : null;
       fillSaleMaterialOptions(saleMaterialId);
+      fillSaleChannelOptions('');
       document.getElementById('saleQtd').value = '';
       const fb = document.getElementById('saleFeedback');
       fb.className = 'modal-feedback';
@@ -2138,8 +2178,13 @@
       const fb = document.getElementById('saleFeedback');
       const quantidadeVendida = parseQuantidadeInput(document.getElementById('saleQtd').value);
       const selectedId = Number(document.getElementById('saleMaterial').value || saleMaterialId || 0);
+      const channel = String(document.getElementById('saleChannel')?.value || '').trim();
       const item = allInsumos.find((row) => Number(row.id) === selectedId);
       saleMaterialId = selectedId;
+
+      const saleObservationParts = ['Venda registrada'];
+      if (channel) saleObservationParts.push(`Canal: ${channel}`);
+      const saleObservation = saleObservationParts.join(' | ');
 
       if (!item) {
         fb.textContent = 'Material inválido para venda.';
@@ -2181,7 +2226,7 @@
             body: JSON.stringify({
               diferenca: -quantidadeVendida,
               motivo: 'VENDA',
-              observacao: 'Venda registrada',
+              observacao: saleObservation,
               usuario_nome: usuario?.nome || 'Sistema'
             })
           });
@@ -2210,7 +2255,7 @@
             quantidade_anterior: qtdAnterior,
             quantidade_atual: qtdAtualizada,
             usuario_nome: usuario?.nome || 'Sistema',
-            observacao: 'Venda registrada',
+            observacao: saleObservation,
             created_at: new Date().toISOString()
           });
           persistMockMovimentacoes(movs);
@@ -2736,6 +2781,12 @@
           return;
         }
 
+        if (!Number.isFinite(qtdMin) || qtdMin < 0) {
+          fb.textContent = 'Informe uma quantidade mínima válida para o item final.';
+          fb.className = 'modal-feedback error';
+          return;
+        }
+
         const itemFinal = allInsumos.find((item) => Number(item.id) === Number(editItemId));
         if (!itemFinal) {
           fb.textContent = 'Item final não encontrado.';
@@ -2745,7 +2796,9 @@
 
         const quantidadeAdicionar = Number.isFinite(qtdInput) && qtdInput > 0 ? qtdInput : 0;
         const precoAnterior = Number(itemFinal.preco_manual || 0);
+        const qtdMinAnterior = Number(itemFinal.ponto_pedido ?? itemFinal.quantidade_minima ?? 0);
         const precoMudou = Number(precoManualAjustado.toFixed(2)) !== Number(precoAnterior.toFixed(2));
+        const qtdMinMudou = Number(qtdMin) !== Number(qtdMinAnterior);
 
         btn.disabled = true;
         btn.textContent = 'Processando...';
@@ -2758,7 +2811,10 @@
             const updateRes = await fetch(`/api/materiais/${itemFinal.id}`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-              body: JSON.stringify({ preco_manual: Number(precoManualAjustado.toFixed(2)) })
+              body: JSON.stringify({
+                preco_manual: Number(precoManualAjustado.toFixed(2)),
+                quantidade_minima: qtdMin
+              })
             });
             const updateData = await updateRes.json();
             if (!updateData.success) throw new Error(updateData.message || 'Falha ao atualizar preço do item final');
@@ -2767,6 +2823,7 @@
             const idx = lista.findIndex((m) => Number(m.id) === Number(itemFinal.id));
             if (idx >= 0) {
               lista[idx].preco_manual = Number(precoManualAjustado.toFixed(2));
+              lista[idx].quantidade_minima = qtdMin;
               const nextId = parseInt(localStorage.getItem(MOCK_MATERIAIS_NEXT_ID_KEY) || '1', 10) || 1;
               persistMockMateriais(lista, nextId);
             }
@@ -2776,8 +2833,14 @@
           await carregarInsumos();
           if (quantidadeAdicionar > 0 && precoMudou) {
             showToast(`Item final atualizado: +${fmtNum(quantidadeAdicionar)} em ${itemFinal.nome} e preço ajustado.`);
+          } else if (quantidadeAdicionar > 0 && qtdMinMudou) {
+            showToast(`Item final atualizado: +${fmtNum(quantidadeAdicionar)} em ${itemFinal.nome} e quantidade mínima ajustada.`);
           } else if (quantidadeAdicionar > 0) {
             showToast(`Produção adicional registrada: +${fmtNum(quantidadeAdicionar)} em ${itemFinal.nome}.`);
+          } else if (qtdMinMudou && precoMudou) {
+            showToast(`Preço e quantidade mínima atualizados em ${itemFinal.nome}.`);
+          } else if (qtdMinMudou) {
+            showToast(`Quantidade mínima atualizada em ${itemFinal.nome}.`);
           } else if (precoMudou) {
             showToast(`Preço de venda atualizado em ${itemFinal.nome}.`);
           } else {

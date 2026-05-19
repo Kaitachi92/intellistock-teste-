@@ -467,7 +467,10 @@
       esqueciOverlay.style.display = 'none';
     }
 
-    document.getElementById('esqueciLink').addEventListener('click', (e) => { e.preventDefault(); abrirEsqueci(); });
+    const esqueciLinkTrigger = document.getElementById('esqueciLink') || document.getElementById('openForgotLink');
+    if (esqueciLinkTrigger) {
+      esqueciLinkTrigger.addEventListener('click', (e) => { e.preventDefault(); abrirEsqueci(); });
+    }
     document.getElementById('fecharEsqueci').addEventListener('click', fecharEsqueci);
     document.getElementById('fecharAposSucesso').addEventListener('click', fecharEsqueci);
     esqueciOverlay.addEventListener('click', (e) => { if (e.target === esqueciOverlay) fecharEsqueci(); });

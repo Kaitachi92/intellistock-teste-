@@ -30,6 +30,28 @@
   height: 16px;
 }
 
+@media (max-width: 768px) {
+  .theme-toggle-btn {
+    min-height: 0;
+    padding: 6px 10px;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 560px) {
+  .theme-toggle-btn {
+    min-height: 0;
+    padding: 5px 9px;
+    font-size: 0.76rem;
+    gap: 5px;
+  }
+
+  .theme-toggle-btn .theme-icon svg {
+    width: 15px;
+    height: 15px;
+  }
+}
+
 body.dark-mode {
   --bg: #0e171b;
   --ink: #e6f0f2;
@@ -668,4 +690,57 @@ body.dark-mode .period-btn:hover {
   background: rgba(19, 164, 150, 0.2) !important;
   color: var(--brand-strong) !important;
   border-color: rgba(119, 217, 204, 0.4) !important;
+}
+
+/* ===== CAMADA DE SEGURANCA DE TEMA (CLARO/ESCURO) ===== */
+
+/* Modo claro: garante legibilidade em controles nativos */
+body:not(.dark-mode) input:not([type="checkbox"]):not([type="radio"]),
+body:not(.dark-mode) select,
+body:not(.dark-mode) textarea {
+  color: #17343f;
+  background: #fafcfc;
+  border-color: rgba(18, 33, 39, 0.18);
+}
+
+body:not(.dark-mode) select option,
+body:not(.dark-mode) select optgroup {
+  color: #17343f;
+  background: #f8fbfc;
+}
+
+/* Modo escuro: evita texto/fundo invertido em dropdowns e listas */
+body.dark-mode select option,
+body.dark-mode select optgroup {
+  color: var(--ink) !important;
+  background: #0f1b21 !important;
+}
+
+/* Lista de materiais da venda no dashboard */
+body.dark-mode #saleMaterial {
+  color: var(--ink) !important;
+  background: #0f1b21 !important;
+  border-color: var(--line) !important;
+}
+
+body.dark-mode #saleMaterial option {
+  color: var(--ink) !important;
+  background: #0f1b21 !important;
+}
+
+body.dark-mode #saleMaterial option:checked {
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #1d67c6, #2c7be5) !important;
+}
+
+/* Pré-visualização de item de venda com contraste consistente */
+body.dark-mode .sale-material-preview {
+  color: #eaf6fb !important;
+  border-color: rgba(126, 222, 235, 0.3) !important;
+  background: linear-gradient(145deg, rgba(12, 52, 71, 0.88), rgba(8, 32, 43, 0.92)) !important;
+}
+
+body.dark-mode .sale-material-preview.is-empty {
+  color: #9fb8c2 !important;
+  background: rgba(9, 35, 49, 0.55) !important;
 }

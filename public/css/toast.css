@@ -1,0 +1,87 @@
+.toast-wrap {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.toast {
+  background: var(--ink);
+  color: #fff;
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  animation: toastSlideIn 0.3s ease;
+  pointer-events: auto;
+  max-width: 300px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.toast::before {
+  content: 'i';
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.74rem;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.26);
+  color: #ffffff;
+  flex: 0 0 18px;
+  line-height: 1;
+  margin-top: 1px;
+}
+
+.toast.success {
+  background: var(--brand-strong);
+}
+
+.toast.error {
+  background: var(--danger);
+}
+
+.toast.warning {
+  background: #b16810;
+}
+
+.toast.info {
+  background: #2f5f8f;
+}
+
+.toast.success::before {
+  content: '\2713';
+}
+
+.toast.error::before {
+  content: '\2715';
+}
+
+.toast.warning::before {
+  content: '!';
+}
+
+.toast.info::before {
+  content: 'i';
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

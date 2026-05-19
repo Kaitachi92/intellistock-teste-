@@ -16,9 +16,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/toast.css">
   <link rel="stylesheet" href="/css/theme-toggle.css">
+  <link rel="stylesheet" href="/css/notifications-bell.css">
   <script src="/js/theme-toggle.js" defer></script>
+  <script src="/js/notifications-bell.js" defer></script>
 
 </head>
 <body>
@@ -298,6 +301,7 @@
   </div>
 
   <script src="/js/auth-service.js"></script>
+  <script src="/js/toast.js"></script>
   <script>
     // ===== AUTH GUARD =====
     const usuario = window.AuthService.getCurrentUser();
@@ -361,7 +365,52 @@
     const MOCK_NEXT_ID_KEY = 'intellistock_mock_next_id_v1';
     const MOCK_MOVIMENTACOES_STORAGE_KEY = 'intellistock_mock_movimentacoes_v1';
     const MATERIAL_CATEGORY_MAP_KEY = 'intellistock_material_category_map_v1';
+    const DEFAULT_SALE_CHANNELS = ['Shopee', 'Mercado Livre', 'TikTok', 'WhatsApp', 'Instagram', 'Outro'];
     const MAX_NOME_ITEM = 150;
+
+    function getMarketplaceStorageKey() {
+      const userRef = String(usuario?.id || usuario?.email || usuario?.nome || 'default').trim().toLowerCase();
+      return `intellistock_marketplaces_v1_${userRef}`;
+    }
+
+    function readCustomMarketplaces() {
+      try {
+        const raw = JSON.parse(localStorage.getItem(getMarketplaceStorageKey()) || '[]');
+        if (!Array.isArray(raw)) return [];
+        return [...new Set(raw.map((item) => String(item || '').trim()).filter(Boolean))];
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function getSaleChannels() {
+      return [...new Set([...DEFAULT_SALE_CHANNELS, ...readCustomMarketplaces()])];
+    }
+
+    function renderSaleChannelOptions(selected = '') {
+      const select = document.getElementById('saleChannel');
+      if (!select) return;
+
+      const selectedValue = String(selected || select.value || '').trim();
+      const options = ['<option value="">Venda direta</option>'];
+
+      getSaleChannels().forEach((channel) => {
+        const value = String(channel || '').trim();
+        if (!value) return;
+        const isSelected = value === selectedValue ? ' selected' : '';
+        options.push(`<option value="${escHtml(value)}"${isSelected}>${escHtml(value)}</option>`);
+      });
+
+      select.innerHTML = options.join('');
+
+      if (selectedValue && selectedValue !== '' && !getSaleChannels().includes(selectedValue)) {
+        const extraOption = document.createElement('option');
+        extraOption.value = selectedValue;
+        extraOption.textContent = selectedValue;
+        extraOption.selected = true;
+        select.appendChild(extraOption);
+      }
+    }
     const defaultMockMateriais = [
       { id: 1, codigo_barras: '7891234000010', nome: 'Parafuso M6 Inox', fornecedor: 'MetalSul Distribuidora', quantidade_atual: 250, quantidade_minima: 100, preco_custo: 0.35, margem_lucro: 30, preco_manual: 0.45, categoria: 'materia_prima' },
       { id: 2, codigo_barras: '7891234000027', nome: 'Porca Sextavada M6', fornecedor: 'MetalSul Distribuidora', quantidade_atual: 180, quantidade_minima: 100, preco_custo: 0.22, margem_lucro: 35, preco_manual: 0.30, categoria: 'materia_prima' },
@@ -479,15 +528,6 @@
     }
 
     persistMockMateriais();
-
-    // ===== TOAST =====
-    function showToast(msg, type = 'success') {
-      const el = document.createElement('div');
-      el.className = `toast ${type}`;
-      el.textContent = msg;
-      document.getElementById('toastWrap').appendChild(el);
-      setTimeout(() => el.remove(), 3500);
-    }
 
     // ===== CURRENCY =====
     function fmt(val) {
@@ -792,6 +832,7 @@
       const codigo = String(item.codigo_barras || '-');
       const qtd = fmtQty(item.quantidade_atual || 0);
       const unidade = item.unidade && item.unidade !== 'un' ? ` ${String(item.unidade)}` : '';
+      const precoAtual = getSaleDisplayPrice(item);
       const estoqueAtual = Number(item.quantidade_atual || 0);
       const estoqueMinimo = Number(item.quantidade_minima || 0);
       const stockClass = estoqueAtual <= estoqueMinimo ? 'sale-chip-stock low' : 'sale-chip-stock';
@@ -803,6 +844,7 @@
         <div class="sale-preview-meta">
           <span class="sale-chip">Cód: ${escHtml(codigo)}</span>
           <span class="sale-chip ${stockClass}">Estoque: ${escHtml(qtd + unidade)}</span>
+          <span class="sale-chip sale-chip-price">Preço: ${escHtml(precoAtual)}</span>
         </div>
       `;
     }
@@ -882,6 +924,11 @@
       return `${text.slice(0, keepStart)}...${text.slice(-keepEnd)}`;
     }
 
+    function getSaleDisplayPrice(item) {
+      const price = Number(item?.preco_manual ?? item?.preco_venda ?? 0);
+      return fmt(Number.isFinite(price) ? price : 0);
+    }
+
     function buildSaleOptionLabel(item) {
       const nomeCurto = truncateOptionLabel(item.nome || 'Material', 24);
       const codigoCurto = compactMiddleText(item.codigo_barras || '-', 18);
@@ -941,6 +988,14 @@
           allMateriais = mockMateriais.map(item => enrichMaterialCategory(item));
         }
         applyFilters();
+
+        // Se o modal de venda estiver aberto, mantém a lista/preço sincronizados com o cadastro atualizado.
+        const saleOverlayEl = document.getElementById('saleOverlay');
+        if (saleOverlayEl && saleOverlayEl.classList.contains('open')) {
+          fillSaleMaterialOptions(saleMaterialId, '');
+          syncSaleSearchFieldWithSelection();
+          document.getElementById('btnSaveSale').disabled = document.getElementById('saleMaterial').disabled;
+        }
       } catch (err) {
         showToast('Erro ao carregar materiais: ' + err.message, 'error');
         renderTable([]);
@@ -994,7 +1049,7 @@
       fillSaleMaterialOptions(saleMaterialId, '');
       syncSaleSearchFieldWithSelection();
       document.getElementById('saleQtd').value = '';
-      document.getElementById('saleChannel').value = '';
+      renderSaleChannelOptions('');
       document.getElementById('saleGrossValue').value = '';
       document.getElementById('saleFeePercent').value = '';
       const fb = document.getElementById('saleFeedback');
@@ -1019,6 +1074,12 @@
         return;
       }
       openSaleModal();
+    });
+
+    window.addEventListener('storage', (event) => {
+      if (event.key === getMarketplaceStorageKey() && saleOverlay.classList.contains('open')) {
+        renderSaleChannelOptions(document.getElementById('saleChannel').value);
+      }
     });
 
     document.getElementById('btnCancelSale').addEventListener('click', closeSaleModal);
