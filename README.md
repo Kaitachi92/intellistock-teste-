@@ -1,5 +1,7 @@
 ﻿# IntelliStock - Sistema de Gerenciamento de Estoque
 
+Atualizacao de validacao de deploy em 18/05/2026.
+
 API e interface web para controle de materiais e insumos, construida com **Node.js**, **Express** e **MySQL**.
 
 ---
