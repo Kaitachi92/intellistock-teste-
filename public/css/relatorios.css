@@ -822,6 +822,7 @@
       display: -webkit-box;
       -webkit-box-orient: vertical;
       -webkit-line-clamp: 2;
+      line-clamp: 2;
       overflow: hidden;
       line-height: 1.08;
       min-height: calc(1.08em * 2);
@@ -1411,6 +1412,7 @@
       display: -webkit-box;
       -webkit-box-orient: vertical;
       -webkit-line-clamp: 3;
+      line-clamp: 3;
       overflow: hidden;
     }
 
