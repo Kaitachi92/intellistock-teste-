@@ -1,4 +1,4 @@
-    :root {
+:root {
       --bg: #f3f7f7;
       --ink: #122127;
       --muted: #5d6b70;
@@ -73,7 +73,7 @@
       justify-content: center;
       flex-wrap: nowrap;
       gap: 6px;
-      overflow-x: auto;
+      overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
     }
 
@@ -1929,4 +1929,107 @@
   
 .is-hidden {
   display: none !important;
+}
+
+/* Centraliza o modal-overlay igual ao dashboard (desktop e mobile) */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 25, 30, 0.45);
+  z-index: 100;
+  backdrop-filter: blur(3px);
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.modal-overlay:not(.is-hidden) {
+  display: flex;
+}
+
+.modal-overlay .modal {
+  background: var(--card);
+  border-radius: 22px;
+  padding: 28px;
+  width: 100%;
+  max-width: 480px;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.22);
+  animation: popIn 0.25s ease;
+  position: relative;
+}
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.96) translateY(12px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 12px;
+}
+.modal-header h3 {
+  font-family: 'Sora', sans-serif;
+  font-size: 1.18rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.3rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  color: var(--muted);
+  transition: color 0.2s;
+  min-width: auto;
+  min-height: auto;
+}
+.modal-close:hover {
+  color: var(--ink);
+}
+.modal-body {
+  margin-bottom: 20px;
+}
+.field {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.field label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #1f3840;
+}
+.field input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 11px 13px;
+  font-size: 0.92rem;
+  font-family: 'Manrope', sans-serif;
+  outline: none;
+  background: #fafcfc;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.field input:focus {
+  border-color: rgba(14, 143, 131, 0.55);
+  box-shadow: 0 0 0 4px rgba(14, 143, 131, 0.12);
+}
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+.modal-actions .btn {
+  flex: 1;
+  min-height: 42px;
+}
+@media (max-width: 560px) {
+  .modal-actions { flex-direction: column-reverse; gap: 8px; }
 }

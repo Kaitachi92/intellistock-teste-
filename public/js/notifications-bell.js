@@ -10,6 +10,8 @@
   var refreshTimer = null;
   var refreshDebounceTimer = null;
   var currentFingerprint = '';
+  var NOTIF_KEY = 'intellistock_alerts_history_v1_';
+  var NOTIF_SEEN_KEY = 'intellistock_alerts_seen_v1_';
 
   function getUserRef() {
     try {
@@ -20,20 +22,32 @@
     }
   }
 
-  function getSeenFingerprint() {
+  function getNotifs() {
     try {
-      return localStorage.getItem(SEEN_KEY_PREFIX + getUserRef()) || '';
+      return JSON.parse(localStorage.getItem(NOTIF_KEY + getUserRef()) || '[]');
     } catch (_) {
-      return '';
+      return [];
     }
   }
 
-  function saveSeenFingerprint(fingerprint) {
+  function saveNotifs(arr) {
     try {
-      localStorage.setItem(SEEN_KEY_PREFIX + getUserRef(), fingerprint || '');
+      localStorage.setItem(NOTIF_KEY + getUserRef(), JSON.stringify(arr || []));
+    } catch (_) {}
+  }
+
+  function getSeenNotifs() {
+    try {
+      return JSON.parse(localStorage.getItem(NOTIF_SEEN_KEY + getUserRef()) || '[]');
     } catch (_) {
-      // noop
+      return [];
     }
+  }
+
+  function saveSeenNotifs(arr) {
+    try {
+      localStorage.setItem(NOTIF_SEEN_KEY + getUserRef(), JSON.stringify(arr || []));
+    } catch (_) {}
   }
 
   function getAuthHeadersSafe() {
@@ -114,7 +128,8 @@
       quandoComprar: String(quando),
       resumo: String(texto),
       status: status,
-      nivel: nivel
+      nivel: nivel,
+      updatedAt: item && (item.updated_at || item.updatedAt || null)
     };
   }
 
@@ -180,7 +195,15 @@
 
     if (unreadCount > 0) {
       badge.classList.remove('is-hidden');
-      badge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
+      if (unreadCount > 9999) {
+        badge.textContent = '9999+';
+      } else if (unreadCount > 999) {
+        badge.textContent = '999+';
+      } else if (unreadCount > 99) {
+        badge.textContent = '99+';
+      } else {
+        badge.textContent = String(unreadCount);
+      }
     } else {
       badge.classList.add('is-hidden');
       badge.textContent = '0';
@@ -223,21 +246,38 @@
   async function refreshNotifications() {
     try {
       var items = await loadAlerts();
-      var prioritized = items.filter(isSellOutPriority);
-      var listToRender = prioritized.length ? prioritized : items;
 
-      listToRender.sort(function (a, b) {
-        var scoreA = (a.quantidadeAtual <= 0 ? 100000 : 0) + (toNumber(a.deficit, 0) * 100) + (toNumber(a.consumoMedio7Dias, 0) * 10);
-        var scoreB = (b.quantidadeAtual <= 0 ? 100000 : 0) + (toNumber(b.deficit, 0) * 100) + (toNumber(b.consumoMedio7Dias, 0) * 10);
-        return scoreB - scoreA;
+      // Unifica e ordena: zerados primeiro, depois abaixo do mínimo, ambos em sequência
+      var listToRender = items.slice().sort(function(a, b) {
+        // Zerados primeiro
+        if (a.quantidadeAtual <= 0 && b.quantidadeAtual > 0) return -1;
+        if (a.quantidadeAtual > 0 && b.quantidadeAtual <= 0) return 1;
+        // Dentro do mesmo grupo, mais recente primeiro
+        var dateA = a.updatedAt ? new Date(a.updatedAt) : new Date(0);
+        var dateB = b.updatedAt ? new Date(b.updatedAt) : new Date(0);
+        return dateB - dateA;
       });
 
       currentFingerprint = buildFingerprint(listToRender);
       renderList(listToRender);
 
-      var seen = getSeenFingerprint();
-      var unread = currentFingerprint && currentFingerprint !== seen ? listToRender.length : 0;
-      updateBadge(unread);
+      // Histórico de notificações
+      var notifs = getNotifs();
+      var seenNotifs = getSeenNotifs();
+      var now = Date.now();
+      // Adiciona notificação só se item entrou em estado crítico e não existe notificação para ele
+      listToRender.forEach(function(item) {
+        if (!notifs.find(n => n.id === item.id)) {
+          notifs.push({ id: item.id, nome: item.nome, createdAt: now });
+        }
+      });
+      // Remove notificações de itens que normalizaram
+      notifs = notifs.filter(n => listToRender.find(item => item.id === n.id));
+      saveNotifs(notifs);
+
+      // Calcula notificações não vistas
+      var unseen = notifs.filter(n => !seenNotifs.includes(n.id));
+      updateBadge(unseen.length);
     } catch (error) {
       var list = document.getElementById(LIST_ID);
       if (list) {
@@ -265,8 +305,11 @@
     modal.classList.remove('is-hidden');
     btn.setAttribute('aria-expanded', 'true');
     document.body.classList.add('nav-alert-open');
-    saveSeenFingerprint(currentFingerprint);
-    updateBadge(0);
+    // Marca todas as notificações atuais como vistas
+    var notifs = getNotifs();
+    var ids = notifs.map(n => n.id);
+    saveSeenNotifs(ids);
+    updateBadge(0); // Some o badge ao abrir o painel
   }
 
   function positionBellByViewport() {
@@ -316,7 +359,7 @@
     button.className = 'nav-alert-btn';
     button.setAttribute('aria-label', 'Abrir avisos de estoque');
     button.setAttribute('aria-expanded', 'false');
-    button.innerHTML = iconBell + '<span class="nav-alert-label">Avisos</span><span id="' + COUNT_ID + '" class="nav-alert-count is-hidden">0</span>';
+    button.innerHTML = '<span class="nav-alert-bell-wrap">' + iconBell + '</span><span class="nav-alert-label">Avisos</span><span id="' + COUNT_ID + '" class="nav-alert-count is-hidden">0</span>';
 
     wrap.appendChild(button);
     fornecedoresLink.insertAdjacentElement('afterend', wrap);

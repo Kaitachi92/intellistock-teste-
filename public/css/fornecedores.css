@@ -72,7 +72,7 @@ nav {
   justify-content: center;
   gap: 6px;
   flex-wrap: nowrap;
-  overflow-x: auto;
+  overflow-x: hidden;
 }
 
 nav a {

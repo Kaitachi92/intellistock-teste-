@@ -1,3 +1,71 @@
+  // Função global para atualizar UI de assinatura (usada em todas as páginas)
+  function setSubscriptionUi(payload) {
+    const usuario = getCurrentUser();
+    const cliente = payload?.cliente || {};
+    const assinatura = payload?.assinatura || null;
+
+    // Nome completo
+    const nome = cliente.nome || usuario?.nome || '-';
+    const cpf = cliente.cpf_mask || (cliente.cpf_cnpj ? formatCpf(cliente.cpf_cnpj) : '-');
+    if (document.getElementById('subscriptionFullName'))
+      document.getElementById('subscriptionFullName').textContent = nome;
+    if (document.getElementById('subscriptionCpf'))
+      document.getElementById('subscriptionCpf').textContent = cpf;
+
+    // Plano, status, cartão, dias
+    if (!assinatura) {
+      if (document.getElementById('subscriptionPlan'))
+        document.getElementById('subscriptionPlan').textContent = 'Sem assinatura ativa';
+      if (document.getElementById('subscriptionStatus')) {
+        document.getElementById('subscriptionStatus').textContent = 'Sem assinatura';
+        document.getElementById('subscriptionStatus').classList.remove('is-active');
+      }
+      if (document.getElementById('subscriptionCardMask'))
+        document.getElementById('subscriptionCardMask').textContent = 'Será informado no checkout';
+      if (document.getElementById('subscriptionDays'))
+        document.getElementById('subscriptionDays').textContent = '0 dias';
+      return;
+    }
+
+    const planoLabel = assinatura.plano ? `Plano ${assinatura.plano}` : 'Plano não definido';
+    const statusLabel = {
+      ativa: 'Ativa', expirada: 'Expirada', cancelada: 'Cancelada', pendente: 'Pendente', suspensa: 'Suspensa'
+    }[assinatura.status] || 'Sem assinatura';
+    const dias = Number(assinatura.dias_restantes || 0);
+    const mascaraCartao = assinatura.cartao?.mascarado || 'Será informado no checkout';
+    const bandeira = assinatura.cartao?.bandeira ? `${assinatura.cartao.bandeira.toUpperCase()} ` : '';
+
+    if (document.getElementById('subscriptionPlan'))
+      document.getElementById('subscriptionPlan').textContent = planoLabel;
+    if (document.getElementById('subscriptionStatus')) {
+      document.getElementById('subscriptionStatus').textContent = statusLabel;
+      document.getElementById('subscriptionStatus').classList.toggle('is-active', assinatura.status === 'ativa');
+    }
+    if (document.getElementById('subscriptionCardMask'))
+      document.getElementById('subscriptionCardMask').textContent = `${bandeira}${mascaraCartao}`.trim();
+    if (document.getElementById('subscriptionDays'))
+      document.getElementById('subscriptionDays').textContent = `${dias} dia${dias === 1 ? '' : 's'}`;
+
+    if (assinatura.plano && document.getElementById('renewPlan')) {
+      const selectPlan = document.getElementById('renewPlan');
+      const available = Array.from(selectPlan.options).map((opt) => opt.value);
+      if (available.includes(assinatura.plano)) {
+        selectPlan.value = assinatura.plano;
+      }
+    }
+  }
+
+  // Função auxiliar para formatar CPF/CNPJ
+  function formatCpf(value) {
+    const digits = String(value || '').replace(/\D/g, '');
+    if (digits.length === 11) {
+      return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    }
+    if (digits.length === 14) {
+      return digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+    }
+    return value || '-';
+  }
 (function () {
   const MODE_KEY = 'auth_mode';
   const DEFAULT_MODE = 'api';
@@ -602,7 +670,32 @@
       try {
         await updateCurrentUserName(novoNome);
         closeEditNameModal();
-        window.location.reload();
+        // Atualiza o nome do usuário no topo, se existir
+        const userNameEl = document.getElementById('userName');
+        if (userNameEl) {
+          userNameEl.textContent = novoNome;
+        }
+        // Atualiza o avatar, se existir
+        const avatarEl = document.getElementById('avatarInitial');
+        if (avatarEl) {
+          const ini = novoNome.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
+          avatarEl.textContent = ini;
+        }
+        // Atualiza objeto _usuario em memória, se existir
+        if (typeof _usuario !== 'undefined' && _usuario) {
+          _usuario.nome = novoNome;
+        }
+        // Atualiza o card de assinatura se função global existir
+        if (typeof window.setSubscriptionUi === 'function') {
+          window.setSubscriptionUi({ cliente: { nome: novoNome }, assinatura: null });
+        } else {
+          // fallback: atualiza diretamente o campo
+          const fullNameEl = document.getElementById('subscriptionFullName');
+          if (fullNameEl) {
+            fullNameEl.textContent = novoNome;
+          }
+        }
+        // Não faz reload!
       } catch (error) {
         window.alert(error.message || 'Não foi possível atualizar o nome.');
       } finally {
@@ -697,6 +790,7 @@
     return {};
   }
 
+  window.setSubscriptionUi = setSubscriptionUi;
   window.AuthService = {
     getMode,
     setMode,

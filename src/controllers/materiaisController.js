@@ -33,17 +33,14 @@ function calcularDeficit(material) {
 }
 
 function precisaNotificarBaixoEstoque(materialAntes, materialDepois) {
-  const deficitDepois = calcularDeficit(materialDepois);
-  if (deficitDepois <= 0) return false;
+  // Só notifica se ANTES não era crítico e AGORA é crítico
+  const antesCritico = isCriticalStock(materialAntes?.quantidade_atual, materialAntes?.quantidade_minima);
+  const depoisCritico = isCriticalStock(materialDepois?.quantidade_atual, materialDepois?.quantidade_minima);
+  return !antesCritico && depoisCritico;
+}
 
-  if (!materialAntes) return true;
-
-  const deficitAntes = calcularDeficit(materialAntes);
-  if (deficitAntes <= 0) return true;
-
-  const qtdAntes = toNumber(materialAntes?.quantidade_atual, 0);
-  const qtdDepois = toNumber(materialDepois?.quantidade_atual, 0);
-  return qtdDepois < qtdAntes;
+function isCriticalStock(atual, minimo) {
+  return toNumber(atual, 0) <= 0 || (toNumber(minimo, 0) > 0 && toNumber(atual, 0) <= toNumber(minimo, 0));
 }
 
 async function listarEmailsClientesAtivos(usuarioId) {

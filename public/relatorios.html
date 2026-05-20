@@ -244,6 +244,45 @@
 
   <script src="/js/auth-service.js"></script>
   <script>
+    // Função restaurada para exibir informações do cliente corretamente
+    function setSubscriptionUi(payload) {
+      const cliente = payload?.cliente || {};
+      const assinatura = payload?.assinatura || null;
+
+      document.getElementById('subscriptionFullName').textContent = cliente.nome || (_usuario?.nome || '-');
+      document.getElementById('subscriptionCpf').textContent = cliente.cpf_mask || formatCpf(cliente.cpf_cnpj || '');
+
+      if (!assinatura) {
+        document.getElementById('subscriptionPlan').textContent = 'Sem assinatura ativa';
+        document.getElementById('subscriptionStatus').textContent = 'Sem assinatura';
+        document.getElementById('subscriptionStatus').classList.remove('is-active');
+        document.getElementById('subscriptionCardMask').textContent = 'Será informado no checkout';
+        document.getElementById('subscriptionDays').textContent = '0 dias';
+        return;
+      }
+
+      const planoLabel = assinatura.plano ? `Plano ${assinatura.plano}` : 'Plano não definido';
+      const statusLabel = {
+        ativa: 'Ativa', expirada: 'Expirada', cancelada: 'Cancelada', pendente: 'Pendente', suspensa: 'Suspensa'
+      }[assinatura.status] || 'Sem assinatura';
+      const dias = Number(assinatura.dias_restantes || 0);
+      const mascaraCartao = assinatura.cartao?.mascarado || 'Será informado no checkout';
+      const bandeira = assinatura.cartao?.bandeira ? `${assinatura.cartao.bandeira.toUpperCase()} ` : '';
+
+      document.getElementById('subscriptionPlan').textContent = planoLabel;
+      document.getElementById('subscriptionStatus').textContent = statusLabel;
+      document.getElementById('subscriptionStatus').classList.toggle('is-active', assinatura.status === 'ativa');
+      document.getElementById('subscriptionCardMask').textContent = `${bandeira}${mascaraCartao}`.trim();
+      document.getElementById('subscriptionDays').textContent = `${dias} dia${dias === 1 ? '' : 's'}`;
+
+      if (assinatura.plano) {
+        const selectPlan = document.getElementById('renewPlan');
+        const available = Array.from(selectPlan.options).map((opt) => opt.value);
+        if (available.includes(assinatura.plano)) {
+          selectPlan.value = assinatura.plano;
+        }
+      }
+    }
     const _usuario = window.AuthService.getCurrentUser();
     if (!_usuario) {
       window.location.href = '/login.html';
@@ -274,11 +313,17 @@
       userMenuPanel.classList.remove('open');
     });
 
+
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
         userMenuPanel.classList.remove('open');
       }
     });
+
+    // Garante que o editar nome funcione igual ao dashboard
+    if (window.AuthService && typeof window.AuthService.setupEditNameButton === 'function') {
+      window.AuthService.setupEditNameButton();
+    }
 
     function getAuthHeaders() {
       const token = window.AuthService.getSessionToken();
@@ -313,48 +358,12 @@
       return map[status] || 'Sem assinatura';
     }
 
-    function setSubscriptionUi(payload) {
-      const cliente = payload?.cliente || {};
-      const assinatura = payload?.assinatura || null;
-
-      document.getElementById('subscriptionFullName').textContent = cliente.nome || (_usuario?.nome || '-');
-      document.getElementById('subscriptionCpf').textContent = cliente.cpf_mask || formatCpf(cliente.cpf_cnpj || '');
-
-      if (!assinatura) {
-        document.getElementById('subscriptionPlan').textContent = 'Sem assinatura ativa';
-        document.getElementById('subscriptionStatus').textContent = 'Sem assinatura';
-        document.getElementById('subscriptionStatus').classList.remove('is-active');
-        document.getElementById('subscriptionCardMask').textContent = 'Será informado no checkout';
-        document.getElementById('subscriptionDays').textContent = '0 dias';
-        return;
-      }
-
-      const planoLabel = assinatura.plano ? `Plano ${assinatura.plano}` : 'Plano não definido';
-      const statusLabel = statusAssinaturaLabel(assinatura.status);
-      const dias = Number(assinatura.dias_restantes || 0);
-      const mascaraCartao = assinatura.cartao?.mascarado || 'Será informado no checkout';
-      const bandeira = assinatura.cartao?.bandeira ? `${assinatura.cartao.bandeira.toUpperCase()} ` : '';
-
-      document.getElementById('subscriptionPlan').textContent = planoLabel;
-      document.getElementById('subscriptionStatus').textContent = statusLabel;
-      document.getElementById('subscriptionStatus').classList.toggle('is-active', assinatura.status === 'ativa');
-      document.getElementById('subscriptionCardMask').textContent = `${bandeira}${mascaraCartao}`.trim();
-      document.getElementById('subscriptionDays').textContent = `${dias} dia${dias === 1 ? '' : 's'}`;
-
-      if (assinatura.plano) {
-        const selectPlan = document.getElementById('renewPlan');
-        const available = Array.from(selectPlan.options).map((opt) => opt.value);
-        if (available.includes(assinatura.plano)) {
-          selectPlan.value = assinatura.plano;
-        }
-      }
-    }
 
     async function carregarAssinatura() {
       if (!_usuario) return;
 
       if (getMode() !== 'api') {
-        setSubscriptionUi({
+        window.setSubscriptionUi({
           cliente: { nome: _usuario?.nome || 'Usuário Demo', cpf_mask: '000.***.***-00' },
           assinatura: { plano: 'mensal', status: 'ativa', dias_restantes: 15, cartao: { mascarado: '**** **** **** 1234', bandeira: 'visa' } }
         });
@@ -368,14 +377,14 @@
           throw new Error(data.message || 'Falha ao carregar assinatura');
         }
 
-        setSubscriptionUi(data);
+        window.setSubscriptionUi(data);
 
         const cpfRaw = data?.cliente?.cpf_cnpj || '';
         if (cpfRaw) {
           document.getElementById('renewCpf').value = formatCpf(cpfRaw);
         }
       } catch (_) {
-        setSubscriptionUi({ cliente: { nome: _usuario?.nome || '-' }, assinatura: null });
+        window.setSubscriptionUi({ cliente: { nome: _usuario?.nome || '-' }, assinatura: null });
       }
     }
 

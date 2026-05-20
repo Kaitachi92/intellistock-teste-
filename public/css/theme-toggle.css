@@ -1,3 +1,27 @@
+@media (max-width: 640px) {
+  header .user-area {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+  }
+  .theme-toggle-btn {
+    order: 2;
+    margin: 0 12px !important;
+    left: 0;
+    right: 0;
+    position: relative;
+    z-index: 30;
+  }
+  header .user-area > *:not(.theme-toggle-btn) {
+    order: 1;
+  }
+  header .user-area > *:last-child:not(.theme-toggle-btn) {
+    order: 3;
+  }
+}
 .theme-toggle-btn {
   border: 1px solid var(--line, rgba(18, 33, 39, 0.1));
   background: var(--card, #ffffff);
