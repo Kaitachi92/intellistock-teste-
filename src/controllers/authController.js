@@ -358,8 +358,8 @@ class AuthController {
     if (nome.length < 2) {
       return res.status(400).json({ success: false, message: 'Informe um nome válido.' });
     }
-    if (nome.length > 120) {
-      return res.status(400).json({ success: false, message: 'O nome deve ter no máximo 120 caracteres.' });
+    if (nome.length > 50) {
+      return res.status(400).json({ success: false, message: 'O nome deve ter no máximo 50 caracteres.' });
     }
 
     try {

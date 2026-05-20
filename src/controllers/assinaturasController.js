@@ -281,6 +281,7 @@ class AssinaturasController {
 
     if (!PLANOS[planoId])    return res.status(400).json({ success: false, message: 'Plano inválido.' });
     if (nome.length < 3)     return res.status(400).json({ success: false, message: 'Nome precisa ter ao menos 3 caracteres.' });
+    if (nome.length > 50)    return res.status(400).json({ success: false, message: 'Nome precisa ter no máximo 50 caracteres.' });
     if (!emailValido(email)) return res.status(400).json({ success: false, message: 'E-mail inválido.' });
     if (cpfCnpj.length < 11) return res.status(400).json({ success: false, message: 'CPF (11 dígitos) ou CNPJ (14 dígitos) inválido.' });
 

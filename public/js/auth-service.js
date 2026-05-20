@@ -598,8 +598,8 @@
     if (nomeNormalizado.length < 2) {
       throw new Error('Informe um nome válido.');
     }
-    if (nomeNormalizado.length > 120) {
-      throw new Error('O nome deve ter no máximo 120 caracteres.');
+    if (nomeNormalizado.length > 50) {
+      throw new Error('O nome deve ter no máximo 50 caracteres.');
     }
 
     if (getMode() !== 'api') {

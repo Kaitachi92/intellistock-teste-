@@ -289,6 +289,10 @@
         checkoutFeedback.textContent = 'Informe o nome do responsável (mínimo 3 caracteres).';
         checkoutFeedback.classList.add('error'); return;
       }
+      if (nome.length > 50) {
+        checkoutFeedback.textContent = 'Informe um nome com no máximo 50 caracteres.';
+        checkoutFeedback.classList.add('error'); return;
+      }
       if (!/\S+@\S+\.\S+/.test(email)) {
         checkoutFeedback.textContent = 'Informe um e-mail válido.';
         checkoutFeedback.classList.add('error'); return;
