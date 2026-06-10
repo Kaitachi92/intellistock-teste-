@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hub Multi-canal - IntelliStock</title>
+  <link rel="icon" type="image/svg+xml" href="/images/intellistock-logo.svg">
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-511W6LFJMQ"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-511W6LFJMQ');
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/hub.css">
+  <link rel="stylesheet" href="/css/toast.css">
+  <link rel="stylesheet" href="/css/theme-toggle.css">
+  <link rel="stylesheet" href="/css/notifications-bell.css">
+  <script src="/js/theme-toggle.js" defer></script>
+  <script src="/js/notifications-bell.js" defer></script>
+</head>
+<body>
+  <header>
+    <div class="shell topbar">
+      <a class="brand" href="/dashboard.html">
+        <span class="brand-badge">IS</span>
+        <span>IntelliStock</span>
+      </a>
+      <nav>
+        <a href="/dashboard.html">Estoque</a>
+        <a href="/relatorios.html">Relatórios</a>
+        <a href="/insumos.html">Insumos</a>
+        <a href="/fornecedores.html">Fornecedores</a>
+        <a href="/hub.html" class="active">Hub</a>
+      </nav>
+      <div class="user-area">
+        <button class="user-chip user-menu-trigger" id="userMenuTrigger" type="button">
+          <div class="avatar" id="avatarInitial">?</div>
+          <span><span class="chip-greeting">Olá, </span><strong id="userName">...</strong></span>
+        </button>
+        <button class="btn-logout" id="btnLogout" type="button">Sair</button>
+
+        <div class="user-menu-panel" id="userMenuPanel">
+          <div class="subscription-top">
+            <div>
+              <div class="subscription-label">Assinatura IntelliStock</div>
+              <h2 id="subscriptionPlan">Carregando assinatura...</h2>
+            </div>
+            <span class="subscription-status" id="subscriptionStatus">...</span>
+          </div>
+          <div class="subscription-grid">
+            <div class="sub-item">
+              <span>Nome completo</span>
+              <strong id="subscriptionFullName">-</strong>
+            </div>
+            <div class="sub-item">
+              <span>CPF/CNPJ</span>
+              <strong id="subscriptionCpf">-</strong>
+            </div>
+            <div class="sub-item">
+              <span>Cartão para pagamento</span>
+              <strong id="subscriptionCardMask">Não informado</strong>
+            </div>
+            <div class="sub-item">
+              <span>Dias para renovar</span>
+              <strong id="subscriptionDays">-</strong>
+            </div>
+          </div>
+          <div class="subscription-actions">
+            <select id="renewPlan">
+              <option value="semanal">Plano semanal</option>
+              <option value="mensal" selected>Plano mensal</option>
+              <option value="anual">Plano anual</option>
+            </select>
+            <input id="renewCpf" type="text" placeholder="CPF/CNPJ para renovação" maxlength="18">
+            <button class="btn btn-main" id="btnRenewSubscription" type="button">Renovar assinatura</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="shell">
+      <section class="hero reveal-section">
+        <div class="hero-top">
+          <div>
+            <span class="pill">Hub Multi-canal</span>
+            <h1>Centralize lojas, anúncios e sincronização em um único painel.</h1>
+            <p>Esta área conecta seu catálogo local aos canais externos. Você pode cadastrar lojas integradas, importar um anúncio por URL, criar produtos locais, vincular anúncios e publicar no marketplace sem sair do sistema.</p>
+          </div>
+          <div class="hero-actions">
+            <button class="btn btn-main" id="btnRefreshHub" type="button">Atualizar dados</button>
+            <a class="btn btn-soft" href="/dashboard.html">Voltar ao estoque</a>
+          </div>
+        </div>
+
+        <div class="status-banner">
+          <article class="status-card">
+            <span class="status-label">Status do Hub</span>
+            <strong class="status-value" id="healthStatus">...</strong>
+            <div class="status-sub" id="healthQueue">Verificando fila...</div>
+          </article>
+          <article class="status-card">
+            <span class="status-label">Lojas conectadas</span>
+            <strong class="status-value" id="storesCount">0</strong>
+            <div class="status-sub">canais integrados para esta conta</div>
+          </article>
+          <article class="status-card">
+            <span class="status-label">Vínculos ativos</span>
+            <strong class="status-value" id="linksCount">0</strong>
+            <div class="status-sub" id="productsCount">0 produtos locais espelhados</div>
+          </article>
+        </div>
+      </section>
+
+      <section class="layout-grid">
+        <div class="stack">
+          <article class="panel reveal-section">
+            <div class="panel-head">
+              <div>
+                <h2>Nova loja integrada</h2>
+                <p>Cadastre as credenciais de cada canal para habilitar importação, publicação e sincronização de estoque.</p>
+              </div>
+            </div>
+            <form id="storeForm">
+              <div class="form-grid">
+                <div class="field">
+                  <label for="storeMarketplace">Marketplace</label>
+                  <select id="storeMarketplace" required>
+                    <option value="mercado_livre">Mercado Livre</option>
+                    <option value="shopee">Shopee</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="storeName">Nome da loja</label>
+                  <input id="storeName" type="text" placeholder="Ex: ML Loja Principal">
+                </div>
+                <div class="field">
+                  <label for="storeSellerId">Seller ID</label>
+                  <input id="storeSellerId" type="text" placeholder="Opcional, útil para Mercado Livre">
+                </div>
+                <div class="field">
+                  <label for="storeStatus">Status</label>
+                  <select id="storeStatus">
+                    <option value="ativa" selected>Ativa</option>
+                    <option value="pausada">Pausada</option>
+                  </select>
+                </div>
+                <div class="field full">
+                  <label for="storeAccessToken">Token de acesso</label>
+                  <input id="storeAccessToken" type="text" placeholder="Token OAuth do canal" required>
+                </div>
+                <div class="field full">
+                  <label for="storeRefreshToken">Token de atualização</label>
+                  <input id="storeRefreshToken" type="text" placeholder="Opcional para renovação de sessão">
+                </div>
+              </div>
+              <div class="form-actions">
+                <button class="btn btn-main" id="btnSaveStore" type="submit">Salvar loja</button>
+              </div>
+            </form>
+          </article>
+
+          <article class="panel reveal-section">
+            <div class="panel-head">
+              <div>
+                <h2>Importar anúncio por URL</h2>
+                <p>Cole uma URL pública de marketplace para converter os dados em um contrato universal antes do cadastro.</p>
+              </div>
+            </div>
+            <form id="importForm">
+              <div class="form-grid">
+                <div class="field full">
+                  <label for="importUrl">URL do anúncio</label>
+                  <input id="importUrl" type="url" placeholder="https://produto.mercadolivre.com.br/..." required>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button class="btn btn-main" id="btnImportUrl" type="submit">Importar URL</button>
+              </div>
+            </form>
+          </article>
+
+          <article class="table-card reveal-section">
+            <div class="table-head">
+              <div>
+                <h2>Lojas integradas</h2>
+                <p>Conexões já registradas para publicação e sincronização.</p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Marketplace</th>
+                    <th>Loja</th>
+                    <th>Seller</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="storesTableBody">
+                  <tr><td colspan="5" class="empty-row">Carregando lojas...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="table-card reveal-section">
+            <div class="table-head">
+              <div>
+                <h2>Produtos locais do Hub</h2>
+                <p>Itens prontos para vínculo e publicação nos canais conectados.</p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>SKU</th>
+                    <th>Título</th>
+                    <th>Preço</th>
+                    <th>Estoque</th>
+                  </tr>
+                </thead>
+                <tbody id="productsTableBody">
+                  <tr><td colspan="5" class="empty-row">Carregando produtos...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="table-card reveal-section">
+            <div class="table-head">
+              <div>
+                <h2>Vínculos de anúncios</h2>
+                <p>Relações entre produto local e item publicado em cada loja integrada.</p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Produto</th>
+                    <th>Marketplace</th>
+                    <th>ID externo</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="linksTableBody">
+                  <tr><td colspan="5" class="empty-row">Carregando vínculos...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+
+        <div class="stack">
+          <article class="panel reveal-section">
+            <div class="panel-head">
+              <div>
+                <h2>Novo produto local</h2>
+                <p>Cadastre a base local que servirá de origem para publicação nos marketplaces.</p>
+              </div>
+            </div>
+            <form id="productForm">
+              <div class="form-grid">
+                <div class="field">
+                  <label for="productSku">SKU</label>
+                  <input id="productSku" type="text" placeholder="SKU-123" required>
+                </div>
+                <div class="field">
+                  <label for="productStock">Quantidade</label>
+                  <input id="productStock" type="number" min="0" step="1" placeholder="0" required>
+                </div>
+                <div class="field full">
+                  <label for="productTitle">Título</label>
+                  <input id="productTitle" type="text" placeholder="Nome comercial do item" required>
+                </div>
+                <div class="field">
+                  <label for="productPrice">Preço</label>
+                  <input id="productPrice" type="number" min="0" step="0.01" placeholder="0.00" required>
+                </div>
+                <div class="field full">
+                  <label for="productDescription">Descrição</label>
+                  <textarea id="productDescription" placeholder="Resumo do produto para o cadastro interno"></textarea>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button class="btn btn-main" id="btnSaveProduct" type="submit">Salvar produto</button>
+              </div>
+            </form>
+          </article>
+
+          <article class="panel reveal-section">
+            <div class="panel-head">
+              <div>
+                <h2>Vincular anúncio</h2>
+                <p>Associe um produto local a um ID já existente no marketplace para manter o estoque alinhado.</p>
+              </div>
+            </div>
+            <form id="linkForm">
+              <div class="form-grid">
+                <div class="field full">
+                  <label for="linkProduct">Produto local</label>
+                  <select id="linkProduct" required></select>
+                </div>
+                <div class="field full">
+                  <label for="linkStore">Loja integrada</label>
+                  <select id="linkStore" required></select>
+                </div>
+                <div class="field">
+                  <label for="linkExternalId">ID do anúncio no marketplace</label>
+                  <input id="linkExternalId" type="text" placeholder="MLB123456789" required>
+                </div>
+                <div class="field">
+                  <label for="linkSku">SKU no marketplace</label>
+                  <input id="linkSku" type="text" placeholder="Opcional">
+                </div>
+                <div class="field full">
+                  <label for="linkUrl">URL do anúncio</label>
+                  <input id="linkUrl" type="url" placeholder="https://...">
+                </div>
+              </div>
+              <div class="form-actions">
+                <button class="btn btn-main" id="btnSaveLink" type="submit">Criar vínculo</button>
+              </div>
+            </form>
+          </article>
+
+          <article class="panel reveal-section">
+            <div class="panel-head">
+              <div>
+                <h2>Publicar em marketplace</h2>
+                <p>Envie o produto local para a loja integrada selecionada usando o adapter configurado.</p>
+              </div>
+            </div>
+            <form id="publishForm">
+              <div class="form-grid">
+                <div class="field full">
+                  <label for="publishProduct">Produto local</label>
+                  <select id="publishProduct" required></select>
+                </div>
+                <div class="field full">
+                  <label for="publishStore">Loja integrada</label>
+                  <select id="publishStore" required></select>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button class="btn btn-main" id="btnPublish" type="submit">Publicar agora</button>
+              </div>
+              <div class="feedback" id="publishFeedback"></div>
+            </form>
+          </article>
+
+          <article class="preview-card reveal-section">
+            <div class="preview-head">
+              <div>
+                <h2>Prévia da importação</h2>
+                <p>Resultado normalizado a partir da URL informada.</p>
+              </div>
+            </div>
+            <div id="importPreview" class="preview-empty">Nenhuma URL importada ainda.</div>
+          </article>
+
+          <article class="panel reveal-section">
+            <div class="panel-head">
+              <div>
+                <h2>Observações</h2>
+                <p>O Hub já está conectado ao backend em produção local.</p>
+              </div>
+            </div>
+            <div class="inline-note" id="hubModeNote">As operações desta tela usam a API autenticada. Se faltar um adapter operacional para um marketplace, a publicação retorna erro explícito sem alterar o restante do cadastro.</div>
+          </article>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div class="toast-wrap" id="toastWrap"></div>
+
+  <script src="/js/auth-service.js"></script>
+  <script src="/js/toast.js"></script>
+  <script>
+    'use strict';
+
+    const usuario = window.AuthService.getCurrentUser();
+    if (!usuario) {
+      window.location.href = '/login.html';
+    }
+
+    const state = {
+      stores: [],
+      products: [],
+      links: [],
+      lastImportedProduct: null
+    };
+
+    const userNameEl = document.getElementById('userName');
+    const avatarInitialEl = document.getElementById('avatarInitial');
+    const userMenuTrigger = document.getElementById('userMenuTrigger');
+    const userMenuPanel = document.getElementById('userMenuPanel');
+
+    if (usuario) {
+      const nome = usuario.nome || 'Usuário';
+      const nomeExibido = nome.split(' ').slice(0, 2).join(' ') || nome;
+      userNameEl.textContent = nomeExibido;
+      userMenuTrigger.title = nome;
+      avatarInitialEl.textContent = nome.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
+    }
+
+    document.getElementById('btnLogout').addEventListener('click', () => {
+      window.AuthService.logoutAndRedirect('/login.html');
+    });
+
+    userMenuTrigger.addEventListener('click', (event) => {
+      event.stopPropagation();
+      userMenuPanel.classList.toggle('open');
+    });
+
+    userMenuPanel.addEventListener('click', (event) => {
+      event.stopPropagation();
+    });
+
+    document.addEventListener('click', () => {
+      userMenuPanel.classList.remove('open');
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        userMenuPanel.classList.remove('open');
+      }
+    });
+
+    function getAuthHeaders() {
+      const token = window.AuthService.getSessionToken();
+      return token ? { 'Authorization': 'Bearer ' + token } : {};
+    }
+
+    function getMode() {
+      const saved = localStorage.getItem('auth_mode');
+      return saved === 'mock' ? 'mock' : 'api';
+    }
+
+    function formatCpf(value) {
+      const digits = String(value || '').replace(/\D/g, '');
+      if (digits.length === 11) {
+        return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+      }
+      if (digits.length === 14) {
+        return digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+      }
+      return value || '-';
+    }
+
+    function statusAssinaturaLabel(status) {
+      const map = {
+        ativa: 'Ativa',
+        expirada: 'Expirada',
+        cancelada: 'Cancelada',
+        pendente: 'Pendente',
+        suspensa: 'Suspensa'
+      };
+      return map[status] || 'Sem assinatura';
+    }
+
+    function setSubscriptionUi(payload) {
+      const cliente = payload && payload.cliente ? payload.cliente : {};
+      const assinatura = payload && payload.assinatura ? payload.assinatura : null;
+
+      document.getElementById('subscriptionFullName').textContent = cliente.nome || (usuario && usuario.nome) || '-';
+      document.getElementById('subscriptionCpf').textContent = cliente.cpf_mask || formatCpf(cliente.cpf_cnpj || '');
+
+      if (!assinatura) {
+        document.getElementById('subscriptionPlan').textContent = 'Sem assinatura ativa';
+        document.getElementById('subscriptionStatus').textContent = 'Sem assinatura';
+        document.getElementById('subscriptionStatus').classList.remove('is-active');
+        document.getElementById('subscriptionCardMask').textContent = 'Será informado no checkout';
+        document.getElementById('subscriptionDays').textContent = '0 dias';
+        return;
+      }
+
+      const planoLabel = assinatura.plano ? 'Plano ' + assinatura.plano : 'Plano não definido';
+      const statusLabel = statusAssinaturaLabel(assinatura.status);
+      const dias = Number(assinatura.dias_restantes || 0);
+      const mascaraCartao = assinatura.cartao && assinatura.cartao.mascarado ? assinatura.cartao.mascarado : 'Será informado no checkout';
+      const bandeira = assinatura.cartao && assinatura.cartao.bandeira ? assinatura.cartao.bandeira.toUpperCase() + ' ' : '';
+
+      document.getElementById('subscriptionPlan').textContent = planoLabel;
+      document.getElementById('subscriptionStatus').textContent = statusLabel;
+      document.getElementById('subscriptionStatus').classList.toggle('is-active', assinatura.status === 'ativa');
+      document.getElementById('subscriptionCardMask').textContent = (bandeira + mascaraCartao).trim();
+      document.getElementById('subscriptionDays').textContent = dias + ' dia' + (dias === 1 ? '' : 's');
+    }
+
+    async function carregarAssinatura() {
+      if (getMode() !== 'api') {
+        setSubscriptionUi({
+          cliente: { nome: usuario && usuario.nome ? usuario.nome : 'Usuário Demo', cpf_mask: '000.***.***-00' },
+          assinatura: { plano: 'mensal', status: 'ativa', dias_restantes: 15, cartao: { mascarado: '**** **** **** 1234', bandeira: 'visa' } }
+        });
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/assinaturas/status', { headers: getAuthHeaders() });
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.message || 'Falha ao carregar assinatura');
+        }
+
+        setSubscriptionUi(data);
+
+        const cpfRaw = data && data.cliente ? data.cliente.cpf_cnpj || '' : '';
+        if (cpfRaw) {
+          document.getElementById('renewCpf').value = formatCpf(cpfRaw);
+        }
+      } catch (_) {
+        setSubscriptionUi({ cliente: { nome: usuario && usuario.nome ? usuario.nome : '-' }, assinatura: null });
+      }
+    }
+
+    async function renovarAssinatura() {
+      if (getMode() !== 'api') {
+        showToast('A renovação oficial está disponível apenas no modo API.', 'error');
+        return;
+      }
+
+      const plano = document.getElementById('renewPlan').value;
+      const cpfCnpj = document.getElementById('renewCpf').value.replace(/\D/g, '');
+      if (cpfCnpj.length < 11) {
+        showToast('Informe CPF/CNPJ válido para renovar.', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('btnRenewSubscription');
+      btn.disabled = true;
+      btn.textContent = 'Redirecionando...';
+
+      try {
+        const res = await fetch('/api/assinaturas/renovar', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getAuthHeaders()
+          },
+          body: JSON.stringify({ plano: plano, cpf_cnpj: cpfCnpj })
+        });
+
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.message || 'Não foi possível iniciar a renovação.');
+        }
+
+        window.location.href = data.init_point;
+      } catch (error) {
+        showToast(error.message || 'Erro ao renovar assinatura.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Renovar assinatura';
+      }
+    }
+
+    function escHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function fmtMoney(value) {
+      return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function formatMarketplace(value) {
+      const raw = String(value || '').replace(/_/g, ' ').trim();
+      if (!raw) return '-';
+      return raw.replace(/\b\w/g, function (match) { return match.toUpperCase(); });
+    }
+
+    function setLoadingTable(tableBodyId, colSpan, message) {
+      document.getElementById(tableBodyId).innerHTML = '<tr><td colspan="' + colSpan + '" class="empty-row">' + escHtml(message) + '</td></tr>';
+    }
+
+    async function hubRequest(path, options) {
+      if (getMode() !== 'api') {
+        throw new Error('O Hub Multi-canal requer modo API ativo.');
+      }
+
+      const response = await fetch('/api/hub' + path, {
+        ...(options || {}),
+        headers: {
+          ...(options && options.headers ? options.headers : {}),
+          ...getAuthHeaders()
+        }
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.message || 'Falha na operação do Hub.');
+      }
+
+      return payload;
+    }
+
+    function renderHealth(health) {
+      document.getElementById('healthStatus').textContent = health && health.ok ? 'Online' : 'Indisponível';
+      document.getElementById('healthQueue').textContent = health && health.queue ? 'Fila ativa: ' + health.queue : 'Fila indisponível';
+    }
+
+    function renderStores() {
+      const tbody = document.getElementById('storesTableBody');
+      if (!state.stores.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-row">Nenhuma loja integrada cadastrada.</td></tr>';
+      } else {
+        tbody.innerHTML = state.stores.map((store) => {
+          const statusClass = store.status === 'ativa' ? 'badge-ok' : store.status === 'pausada' ? 'badge-warn' : 'badge-off';
+          return '<tr>' +
+            '<td>' + escHtml(store.id) + '</td>' +
+            '<td>' + escHtml(formatMarketplace(store.marketplace)) + '</td>' +
+            '<td>' + escHtml(store.nome_loja || 'Sem nome') + '</td>' +
+            '<td>' + escHtml(store.seller_id || '-') + '</td>' +
+            '<td><span class="badge ' + statusClass + '">' + escHtml(store.status || '-') + '</span></td>' +
+          '</tr>';
+        }).join('');
+      }
+
+      document.getElementById('storesCount').textContent = String(state.stores.length);
+      renderStoreSelects();
+    }
+
+    function renderProducts() {
+      const tbody = document.getElementById('productsTableBody');
+      if (!state.products.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-row">Nenhum produto local cadastrado no Hub.</td></tr>';
+      } else {
+        tbody.innerHTML = state.products.map((product) => {
+          return '<tr>' +
+            '<td>' + escHtml(product.id) + '</td>' +
+            '<td>' + escHtml(product.sku) + '</td>' +
+            '<td>' + escHtml(product.titulo) + '</td>' +
+            '<td>' + escHtml(fmtMoney(product.preco)) + '</td>' +
+            '<td>' + escHtml(String(product.quantidade)) + '</td>' +
+          '</tr>';
+        }).join('');
+      }
+
+      document.getElementById('productsCount').textContent = state.products.length + ' produtos locais espelhados';
+      renderProductSelects();
+    }
+
+    function renderLinks() {
+      const tbody = document.getElementById('linksTableBody');
+      if (!state.links.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-row">Nenhum vínculo criado ainda.</td></tr>';
+      } else {
+        tbody.innerHTML = state.links.map((link) => {
+          const statusClass = link.status_sincronizacao === 'sincronizado' ? 'badge-ok' : 'badge-warn';
+          return '<tr>' +
+            '<td>' + escHtml(link.id) + '</td>' +
+            '<td>' + escHtml(link.produto_titulo || link.produto_sku || '-') + '</td>' +
+            '<td>' + escHtml(formatMarketplace(link.marketplace)) + '</td>' +
+            '<td>' + escHtml(link.marketplace_produto_id || '-') + '</td>' +
+            '<td><span class="badge ' + statusClass + '">' + escHtml(link.status_sincronizacao || '-') + '</span></td>' +
+          '</tr>';
+        }).join('');
+      }
+
+      document.getElementById('linksCount').textContent = String(state.links.length);
+    }
+
+    function renderStoreSelects() {
+      const html = state.stores.length
+        ? state.stores.map((store) => '<option value="' + escHtml(store.id) + '">' + escHtml(formatMarketplace(store.marketplace) + ' - ' + (store.nome_loja || ('Loja #' + store.id))) + '</option>').join('')
+        : '<option value="">Cadastre uma loja primeiro</option>';
+
+      ['linkStore', 'publishStore'].forEach((id) => {
+        const el = document.getElementById(id);
+        el.innerHTML = html;
+        el.disabled = !state.stores.length;
+      });
+    }
+
+    function renderProductSelects() {
+      const html = state.products.length
+        ? state.products.map((product) => '<option value="' + escHtml(product.id) + '">' + escHtml(product.sku + ' - ' + product.titulo) + '</option>').join('')
+        : '<option value="">Cadastre um produto primeiro</option>';
+
+      ['linkProduct', 'publishProduct'].forEach((id) => {
+        const el = document.getElementById(id);
+        el.innerHTML = html;
+        el.disabled = !state.products.length;
+      });
+    }
+
+    function renderImportPreview(product) {
+      const preview = document.getElementById('importPreview');
+      if (!product) {
+        preview.className = 'preview-empty';
+        preview.textContent = 'Nenhuma URL importada ainda.';
+        return;
+      }
+
+      const categorias = Array.isArray(product.categorias) ? product.categorias.map((item) => item.nome).filter(Boolean) : [];
+      const variacoes = Array.isArray(product.variacoes) ? product.variacoes.map((item) => item.nome || item.sku).filter(Boolean) : [];
+
+      preview.className = 'preview-product';
+      preview.innerHTML =
+        '<div>' +
+          '<span class="pill">Produto universal</span>' +
+          '<h3>' + escHtml(product.titulo || 'Sem título') + '</h3>' +
+          '<p class="muted">' + escHtml(product.descricao || 'Sem descrição retornada pelo parser.') + '</p>' +
+        '</div>' +
+        '<div class="preview-meta">' +
+          '<span class="meta-chip">SKU: ' + escHtml(product.sku || '-') + '</span>' +
+          '<span class="meta-chip">Preço: ' + escHtml(fmtMoney(product.preco)) + '</span>' +
+          '<span class="meta-chip">Estoque: ' + escHtml(String(product.estoque || 0)) + '</span>' +
+        '</div>' +
+        '<div>' +
+          '<strong>Categorias</strong>' +
+          '<ul class="preview-list">' +
+            (categorias.length ? categorias.map((item) => '<li>' + escHtml(item) + '</li>').join('') : '<li>Nenhuma categoria extraída.</li>') +
+          '</ul>' +
+        '</div>' +
+        '<div>' +
+          '<strong>Variações</strong>' +
+          '<ul class="preview-list">' +
+            (variacoes.length ? variacoes.map((item) => '<li>' + escHtml(item) + '</li>').join('') : '<li>Nenhuma variação retornada.</li>') +
+          '</ul>' +
+        '</div>';
+    }
+
+    async function loadHubData() {
+      setLoadingTable('storesTableBody', 5, 'Carregando lojas...');
+      setLoadingTable('productsTableBody', 5, 'Carregando produtos...');
+      setLoadingTable('linksTableBody', 5, 'Carregando vínculos...');
+
+      try {
+        const results = await Promise.all([
+          hubRequest('/health'),
+          hubRequest('/stores'),
+          hubRequest('/products'),
+          hubRequest('/links')
+        ]);
+
+        renderHealth(results[0].data || {});
+        state.stores = results[1].data || [];
+        state.products = results[2].data || [];
+        state.links = results[3].data || [];
+        renderStores();
+        renderProducts();
+        renderLinks();
+      } catch (error) {
+        document.getElementById('healthStatus').textContent = 'Erro';
+        document.getElementById('healthQueue').textContent = error.message || 'Falha ao consultar Hub';
+        setLoadingTable('storesTableBody', 5, error.message || 'Falha ao carregar lojas');
+        setLoadingTable('productsTableBody', 5, error.message || 'Falha ao carregar produtos');
+        setLoadingTable('linksTableBody', 5, error.message || 'Falha ao carregar vínculos');
+        showToast(error.message || 'Erro ao carregar o Hub.', 'error');
+      }
+    }
+
+    document.getElementById('storeForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const btn = document.getElementById('btnSaveStore');
+      btn.disabled = true;
+
+      try {
+        await hubRequest('/stores', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            marketplace: document.getElementById('storeMarketplace').value,
+            nome_loja: document.getElementById('storeName').value.trim() || null,
+            seller_id: document.getElementById('storeSellerId').value.trim() || null,
+            status: document.getElementById('storeStatus').value,
+            token_acesso: document.getElementById('storeAccessToken').value.trim(),
+            token_atualizacao: document.getElementById('storeRefreshToken').value.trim() || null
+          })
+        });
+
+        event.target.reset();
+        document.getElementById('storeStatus').value = 'ativa';
+        document.getElementById('storeMarketplace').value = 'mercado_livre';
+        showToast('Loja integrada salva com sucesso.');
+        await loadHubData();
+      } catch (error) {
+        showToast(error.message || 'Erro ao salvar loja.', 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('productForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const btn = document.getElementById('btnSaveProduct');
+      btn.disabled = true;
+
+      try {
+        await hubRequest('/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sku: document.getElementById('productSku').value.trim(),
+            titulo: document.getElementById('productTitle').value.trim(),
+            preco: Number(document.getElementById('productPrice').value || 0),
+            quantidade: Number(document.getElementById('productStock').value || 0),
+            descricao: document.getElementById('productDescription').value.trim() || null
+          })
+        });
+
+        event.target.reset();
+        showToast('Produto local salvo com sucesso.');
+        await loadHubData();
+      } catch (error) {
+        showToast(error.message || 'Erro ao salvar produto.', 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('linkForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const btn = document.getElementById('btnSaveLink');
+      btn.disabled = true;
+
+      try {
+        await hubRequest('/links', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            produto_local_id: document.getElementById('linkProduct').value,
+            loja_integrada_id: document.getElementById('linkStore').value,
+            marketplace_produto_id: document.getElementById('linkExternalId').value.trim(),
+            sku_marketplace: document.getElementById('linkSku').value.trim() || null,
+            url_anuncio: document.getElementById('linkUrl').value.trim() || null,
+            status_sincronizacao: 'sincronizado'
+          })
+        });
+
+        event.target.reset();
+        renderProductSelects();
+        renderStoreSelects();
+        showToast('Vínculo criado com sucesso.');
+        await loadHubData();
+      } catch (error) {
+        showToast(error.message || 'Erro ao criar vínculo.', 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('publishForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const btn = document.getElementById('btnPublish');
+      const feedback = document.getElementById('publishFeedback');
+      btn.disabled = true;
+      feedback.textContent = 'Publicando...';
+
+      try {
+        const payload = await hubRequest('/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            produto_local_id: document.getElementById('publishProduct').value,
+            loja_integrada_id: document.getElementById('publishStore').value
+          })
+        });
+
+        feedback.textContent = 'Publicação concluída com retorno do adapter.';
+        showToast('Publicação enviada com sucesso.');
+        if (payload && payload.data && payload.data.id) {
+          feedback.textContent = 'Publicação concluída. ID retornado: ' + payload.data.id;
+        }
+      } catch (error) {
+        feedback.textContent = error.message || 'Falha ao publicar.';
+        showToast(error.message || 'Erro ao publicar.', 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('importForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const btn = document.getElementById('btnImportUrl');
+      btn.disabled = true;
+
+      try {
+        const payload = await hubRequest('/import/url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: document.getElementById('importUrl').value.trim()
+          })
+        });
+
+        state.lastImportedProduct = payload.data || null;
+        renderImportPreview(state.lastImportedProduct);
+        showToast('URL importada e convertida para o contrato universal.');
+      } catch (error) {
+        renderImportPreview(null);
+        showToast(error.message || 'Erro ao importar URL.', 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('btnRefreshHub').addEventListener('click', async () => {
+      await loadHubData();
+      showToast('Hub atualizado.');
+    });
+
+    document.getElementById('btnRenewSubscription').addEventListener('click', renovarAssinatura);
+    document.getElementById('renewCpf').addEventListener('input', (event) => {
+      event.target.value = formatCpf(event.target.value);
+    });
+
+    carregarAssinatura();
+    loadHubData();
+    renderImportPreview(null);
+
+    const revealEls = document.querySelectorAll('.reveal-section');
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry, index) => {
+        if (entry.isIntersecting) {
+          setTimeout(() => entry.target.classList.add('visible'), index * 70);
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.08 });
+    revealEls.forEach((el) => revealObserver.observe(el));
+  </script>
+</body>
+</html>

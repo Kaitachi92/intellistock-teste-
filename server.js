@@ -23,6 +23,7 @@ app.use((req, res, next) => {
     '/insumos.html',
     '/fornecedores.html',
     '/relatorios.html',
+    '/hub.html',
     '/assinatura.html',
     '/historico.html',
     '/produtos.html',
@@ -87,6 +88,8 @@ const initializeDatabase = async () => {
       database: process.env.DB_NAME || 'estoque_db',
       port: process.env.DB_PORT || 3306,
       ...(sslConfig ? { ssl: sslConfig } : {}),
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 0,
       waitForConnections: true,
       connectionLimit: 10,
       queueLimit: 0
@@ -257,6 +260,7 @@ const insumosRoutes     = require('./src/routes/insumos.routes');
 const authRoutes        = require('./src/routes/auth.routes');
 const assinaturasRoutes = require('./src/routes/assinaturas.routes');
 const fornecedoresRoutes = require('./src/routes/fornecedores.routes');
+const hubRoutes         = require('./src/routes/hub.routes');
 const seedAdmin         = require('./src/utils/seedAdmin');
 
 app.use('/api/materiais',   materiaisRoutes);
@@ -264,6 +268,7 @@ app.use('/api/insumos',     insumosRoutes);
 app.use('/api/auth',        authRoutes);
 app.use('/api/assinaturas', assinaturasRoutes);
 app.use('/api/fornecedores', fornecedoresRoutes);
+app.use('/api/hub',         hubRoutes);
 
 // Rota padrão para teste
 app.get('/api/health', (req, res) => {

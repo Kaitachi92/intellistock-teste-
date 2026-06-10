@@ -30,6 +30,8 @@ const dbConfig = {
   database: process.env.DB_NAME || 'estoque_db',
   port: process.env.DB_PORT || 3306,
   ...(sslConfig ? { ssl: sslConfig } : {}),
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
